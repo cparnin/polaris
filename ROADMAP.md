@@ -21,8 +21,9 @@ router access needed.
 - ✅ **Real device names (reverse mDNS)** — friendly `.local` hostnames for devices
   that answer; router/printer/Mac/iPhone names without any router login.
 - ✅ **Coarse OS hint** — Windows / Apple·Linux·Android / Router·IoT from reply TTL.
-- **Richer names for casted devices** — mDNS *service* discovery (`_googlecast._tcp`,
-  `_airplay`, `_hap`) for Chromecast/Nest/HomeKit friendly names + models.
+- ✅ **Richer names for casted devices** — mDNS *service* discovery (`_googlecast`,
+  `_airplay`, `_raop`, `_hap`, `_sonos`, printers) surfaces the friendly names you
+  set on Chromecast/Nest, Apple TV, HomeKit, Sonos, and printers.
 - **Port & service scan** — opt-in `nmap -sV` on discovered hosts to fingerprint open
   ports and running services; flag risky exposure (open SMB, RDP, Telnet, UPnP).
 - **Rogue-device heuristics** — detect MAC spoofing (same IP, changing MAC), ARP

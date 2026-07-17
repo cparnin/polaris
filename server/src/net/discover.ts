@@ -3,7 +3,7 @@ import { promisify } from "node:util";
 import dns from "node:dns/promises";
 import { detectNetwork, networkBase, type NetInfo } from "./subnet.js";
 import { normalizeMac, formatMac, lookupVendor, isRandomizedMac } from "./vendors.js";
-import { mdnsReverseBatch } from "./mdns.js";
+import { mdnsReverseBatch, mdnsServiceBatch } from "./mdns.js";
 
 const pexec = promisify(execFile);
 
@@ -136,14 +136,22 @@ export async function scanNetwork(): Promise<ScanResult> {
   }
 
   const liveIps = [...ttls.keys()];
-  // Enrich with friendly ".local" names via reverse mDNS (best-effort, batched).
-  const mdnsNames = await mdnsReverseBatch(liveIps);
+  // Enrich names via mDNS (best-effort, batched, run in parallel):
+  //  - reverse PTR  -> a device's ".local" hostname
+  //  - service browse -> friendly names set on Chromecast/Nest, Apple TV,
+  //    HomeKit, Sonos, printers ("Living Room display", "Bedroom Apple TV").
+  const [mdnsNames, serviceNames] = await Promise.all([
+    mdnsReverseBatch(liveIps),
+    mdnsServiceBatch(),
+  ]);
 
   const hosts: DiscoveredHost[] = await Promise.all(
     liveIps.map(async (ip): Promise<DiscoveredHost> => {
       const mac = arp.get(ip) ?? null;
       const macNorm = mac ? normalizeMac(mac) : null;
-      const hostname = mdnsNames.get(ip) ?? (await reverseDns(ip));
+      // Prefer a friendly service name, then the .local hostname, then rDNS.
+      const hostname =
+        serviceNames.get(ip)?.name ?? mdnsNames.get(ip) ?? (await reverseDns(ip));
       return {
         ip,
         mac,
