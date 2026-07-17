@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
-import { listDevices, recentEvents, setLabel, setTrusted } from "./db.js";
+import { listDevices, recentEvents, setLabel, setTrusted, getDeviceById } from "./db.js";
+import { portScan } from "./net/portscan.js";
 import {
   runScan,
   startAutoScan,
@@ -71,6 +72,25 @@ app.patch("/api/devices/:id", (req, res) => {
   if (label !== undefined) setLabel(id, label === "" ? null : label);
   if (trusted !== undefined) setTrusted(id, Boolean(trusted));
   res.json({ ok: true });
+});
+
+// Opt-in port / service scan of a single device (nmap -sV). On-demand only.
+app.post("/api/devices/:id/portscan", async (req, res) => {
+  const dev = getDeviceById(req.params.id);
+  if (!dev) {
+    res.status(404).json({ error: "Unknown device" });
+    return;
+  }
+  if (!dev.ip) {
+    res.status(400).json({ error: "Device has no IP to scan" });
+    return;
+  }
+  try {
+    const result = await portScan(dev.ip);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
 });
 
 // Server-Sent Events: push scan lifecycle to the dashboard in real time.

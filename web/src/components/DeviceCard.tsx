@@ -1,6 +1,6 @@
 import { useState } from "react";
-import type { Device } from "../api.js";
-import { displayName } from "../api.js";
+import type { Device, PortScanResult } from "../api.js";
+import { api, displayName } from "../api.js";
 import { deviceIcon, relTime } from "../deviceMeta.js";
 
 interface Props {
@@ -13,7 +13,30 @@ interface Props {
 export function DeviceCard({ device: d, isNew, onRename, onTrust }: Props) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(d.label ?? "");
+  const [scanning, setScanning] = useState(false);
+  const [scan, setScan] = useState<PortScanResult | null>(null);
   const online = d.online === 1;
+
+  async function runPortScan() {
+    if (scanning) return;
+    setScanning(true);
+    setScan(null);
+    try {
+      setScan(await api.portScan(d.id));
+    } catch (err) {
+      setScan({
+        available: true,
+        ip: d.ip ?? "",
+        scannedAt: Date.now(),
+        durationMs: 0,
+        ports: [],
+        risks: [],
+        message: `Scan error: ${(err as Error).message}`,
+      });
+    } finally {
+      setScanning(false);
+    }
+  }
 
   return (
     <div
@@ -95,6 +118,56 @@ export function DeviceCard({ device: d, isNew, onRename, onTrust }: Props) {
         >
           {d.trusted ? "✓ trusted" : "trust"}
         </button>
+      </div>
+
+      {/* Opt-in port / service scan */}
+      <div className="mt-3 border-t border-white/5 pt-2">
+        <button
+          onClick={runPortScan}
+          disabled={scanning || !d.ip}
+          className="text-[11px] text-zinc-500 hover:text-sky-300 disabled:opacity-50"
+          title="Run an on-demand nmap service scan of this device"
+        >
+          {scanning ? "scanning ports…" : scan ? "↻ rescan ports" : "⌖ scan ports"}
+        </button>
+
+        {scan && (
+          <div className="mt-2 space-y-1">
+            {scan.message && <div className="text-[11px] text-zinc-500">{scan.message}</div>}
+
+            {scan.risks.length > 0 && (
+              <div className="rounded-md bg-red-500/10 px-2 py-1 text-[11px] text-red-300">
+                {scan.risks.map((r) => (
+                  <div key={r}>⚠ {r}</div>
+                ))}
+              </div>
+            )}
+
+            {scan.ports.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {scan.ports.map((p) => (
+                  <span
+                    key={`${p.port}/${p.proto}`}
+                    title={p.product ?? p.service ?? ""}
+                    className={`rounded px-1.5 py-0.5 font-mono text-[10px] ${
+                      p.risk
+                        ? "bg-red-500/15 text-red-300"
+                        : "bg-white/5 text-zinc-300"
+                    }`}
+                  >
+                    {p.port} {p.service ?? p.proto}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {!scan.message && (
+              <div className="text-[10px] text-zinc-600">
+                {scan.ports.length} open · {(scan.durationMs / 1000).toFixed(0)}s
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

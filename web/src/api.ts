@@ -43,6 +43,24 @@ export interface NtfyStatus {
   host: string | null;
 }
 
+export interface OpenPort {
+  port: number;
+  proto: string;
+  service: string | null;
+  product: string | null;
+  risk: string | null;
+}
+
+export interface PortScanResult {
+  available: boolean;
+  ip: string;
+  scannedAt: number;
+  durationMs: number;
+  ports: OpenPort[];
+  risks: string[];
+  message: string | null;
+}
+
 export const api = {
   devices: () =>
     fetch("/api/devices").then(
@@ -61,6 +79,10 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(patch),
     }).then(json<{ ok: boolean }>),
+  portScan: (id: string) =>
+    fetch(`/api/devices/${encodeURIComponent(id)}/portscan`, { method: "POST" }).then(
+      json<PortScanResult>
+    ),
 };
 
 /** Friendly display name for a device: label > hostname > vendor + last octet. */
