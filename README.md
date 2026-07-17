@@ -61,6 +61,18 @@ npm run dev           # backend on 127.0.0.1:4000, dashboard on :5173
 Open **http://localhost:5173**. The first scan runs automatically and repeats
 every 60s.
 
+### Keep it running (auto-start on login)
+
+On macOS, install a LaunchAgent so Iris starts at login and restarts if it
+crashes:
+
+```bash
+./scripts/install-autostart.sh     # enable
+./scripts/uninstall-autostart.sh   # disable
+```
+
+Logs go to `~/Library/Logs/iris-dashboard.log`.
+
 ## Notifications (ntfy)
 
 Point Iris at any [ntfy](https://ntfy.sh) topic (public or self-hosted). Use a
