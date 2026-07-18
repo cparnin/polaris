@@ -43,11 +43,16 @@ Iris sees your entire home network, so it's built to stay yours:
 
 - **The API binds to `127.0.0.1` only.** It is never reachable from the LAN by
   default — the device inventory it exposes stays on your machine.
+- **DNS-rebinding guard.** Every request must carry a loopback `Host` header, so
+  a malicious web page can't point its own domain at `127.0.0.1` and read your
+  network map from your browser. There is **no wide-open CORS** — the dashboard
+  talks to the API same-origin, so none is needed.
 - **No telemetry, no cloud.** The only outbound request Iris ever makes is the
   ntfy push you explicitly configure (and MAC-vendor lookups are fully offline).
 - **Your device database never leaves your machine** — `data/` is git-ignored.
 - Override the bind address with `HOST=0.0.0.0` only if you know what you're doing
-  and are putting auth in front of it.
+  and are putting auth in front of it; add your hostname to `ALLOWED_HOSTS` so the
+  Host guard still lets you in.
 
 ## Requirements
 
@@ -105,6 +110,8 @@ in the header to fire a test push. New devices trigger a notification automatica
 | `NTFY_URL`         | *(unset)*     | ntfy topic URL; unset = alerts off        |
 | `NTFY_TOKEN`       | *(unset)*     | ntfy bearer token (optional)              |
 | `NTFY_PRIORITY`    | `default`     | default ntfy priority                     |
+| `ALLOWED_HOSTS`    | *(unset)*     | extra Host headers allowed (off-loopback) |
+| `IRIS_DATA_DIR`    | `./data`      | where the SQLite database lives           |
 
 ## Architecture
 
@@ -115,10 +122,12 @@ server/  Node + TypeScript
   net/mdns.ts      hand-rolled reverse-mDNS + service-discovery resolver
   net/netbios.ts   NetBIOS node-status names (Windows / NAS / Samba)
   net/vendors.ts   MAC → vendor via bundled OUI DB
-  db.ts            SQLite: devices + events (auto-pruned), transactional scan diffing
+  db.ts            SQLite (iris.sqlite): devices + events (auto-pruned), scan diffing
   notify.ts        ntfy push notifications
+  security.ts      loopback Host-header guard (DNS-rebinding defense)
   scanner.ts       scan orchestration + auto-scan loop + event bus
   index.ts         Express REST API + Server-Sent-Events stream (localhost)
+  *.test.ts        unit tests (node:test) for parsing + network + security logic
 web/     Vite + React + Tailwind v4 dashboard
 ```
 
@@ -133,6 +142,16 @@ web/     Vite + React + Tailwind v4 dashboard
 | POST   | `/api/notify/test`   | send a test ntfy push            |
 | PATCH  | `/api/devices/:id`   | set `label` / `trusted`          |
 | GET    | `/api/stream`        | SSE: scan lifecycle events       |
+
+## Tests
+
+```bash
+npm test        # runs the server suite (Node's built-in runner, no extra deps)
+```
+
+Covers the fiddly, easy-to-break logic: MAC/vendor normalization, subnet math,
+the hand-rolled mDNS + NetBIOS packet parsers, and the loopback Host-header
+guard. No network or database is touched, so the suite is fast and deterministic.
 
 ## Roadmap
 

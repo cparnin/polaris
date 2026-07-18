@@ -1,14 +1,28 @@
 import Database from "better-sqlite3";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, existsSync, renameSync } from "node:fs";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = join(here, "..", "..", "data");
+const DATA_DIR = process.env.IRIS_DATA_DIR ?? join(here, "..", "..", "data");
 mkdirSync(DATA_DIR, { recursive: true });
 
-export const db = new Database(join(DATA_DIR, "cap-network.sqlite"));
+const DB_PATH = join(DATA_DIR, "iris.sqlite");
+// One-time rename from the pre-rebrand filename so existing device history
+// carries over instead of starting from an empty database.
+const LEGACY_DB = join(DATA_DIR, "cap-network.sqlite");
+if (!existsSync(DB_PATH) && existsSync(LEGACY_DB)) {
+  for (const suffix of ["", "-wal", "-shm"]) {
+    try {
+      renameSync(LEGACY_DB + suffix, DB_PATH + suffix);
+    } catch {
+      /* WAL/SHM may be absent — the main file is what matters */
+    }
+  }
+}
+
+export const db = new Database(DB_PATH);
 db.pragma("journal_mode = WAL");
 
 db.exec(`

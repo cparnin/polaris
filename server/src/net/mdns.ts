@@ -53,7 +53,7 @@ function readName(buf: Buffer, offset: number): [string, number] {
 }
 
 /** Extract the target name from the first PTR answer in a response. */
-function parsePtrAnswer(buf: Buffer): string | null {
+export function parsePtrAnswer(buf: Buffer): string | null {
   if (buf.length < 12) return null;
   const qd = buf.readUInt16BE(4);
   const an = buf.readUInt16BE(6);
@@ -77,7 +77,7 @@ function parsePtrAnswer(buf: Buffer): string | null {
   return null;
 }
 
-function cleanName(name: string): string {
+export function cleanName(name: string): string {
   return name.replace(/\.local\.?$/i, "").replace(/\.$/, "").trim();
 }
 

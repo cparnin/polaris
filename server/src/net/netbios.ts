@@ -13,7 +13,7 @@ import dgram from "node:dgram";
 const NB_PORT = 137;
 
 /** The wildcard NetBIOS name "*" in first-level (nibble) encoding: 34 bytes. */
-function encodeWildcardName(): Buffer {
+export function encodeWildcardName(): Buffer {
   const out = Buffer.alloc(34);
   out[0] = 0x20; // encoded length (32)
   const name = Buffer.alloc(16, 0);
@@ -47,7 +47,7 @@ function skipName(buf: Buffer, offset: number): number {
 }
 
 /** Pull the unique machine name (suffix 0x00, not a group) from a response. */
-function parseNodeStatus(buf: Buffer): string | null {
+export function parseNodeStatus(buf: Buffer): string | null {
   if (buf.length < 12) return null;
   const qd = buf.readUInt16BE(4);
   const an = buf.readUInt16BE(6);

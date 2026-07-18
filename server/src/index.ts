@@ -1,5 +1,5 @@
 import express from "express";
-import cors from "cors";
+import { isLoopbackHost } from "./security.js";
 import { listDevices, recentEvents, setLabel, setTrusted, getDeviceById } from "./db.js";
 import { portScan } from "./net/portscan.js";
 import {
@@ -19,7 +19,24 @@ const HOST = process.env.HOST ?? "127.0.0.1";
 const SCAN_INTERVAL_MS = Number(process.env.SCAN_INTERVAL_MS ?? 300_000);
 
 const app = express();
-app.use(cors());
+
+// Defense-in-depth for a loopback service that exposes your whole network map.
+// The dashboard talks to us same-origin (Vite dev proxy / served build), so we
+// need no CORS at all — and we reject any request whose Host header isn't a
+// loopback name to block DNS-rebinding attacks. See ./security.ts.
+const EXTRA_HOSTS = (process.env.ALLOWED_HOSTS ?? "")
+  .split(",")
+  .map((h) => h.trim().toLowerCase())
+  .filter(Boolean);
+
+app.use((req, res, next) => {
+  if (isLoopbackHost(req.headers.host ?? "", EXTRA_HOSTS)) {
+    next();
+    return;
+  }
+  res.status(403).json({ error: "Forbidden: request Host is not a loopback address" });
+});
+
 app.use(express.json());
 
 app.get("/api/health", (_req, res) => {
