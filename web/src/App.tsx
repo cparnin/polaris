@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { api, displayName, type Device, type ScanSummary, type NetEvent, type NtfyStatus } from "./api.js";
 import { StatBar } from "./components/StatBar.js";
+import { NetworkMap } from "./components/NetworkMap.js";
 import { DeviceCard } from "./components/DeviceCard.js";
 import { EventFeed } from "./components/EventFeed.js";
 
@@ -155,6 +156,8 @@ export default function App() {
       </header>
 
       <StatBar devices={devices} />
+
+      <NetworkMap devices={devices} onSelect={(d) => setQuery(displayName(d))} />
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_340px]">
         {/* Devices */}

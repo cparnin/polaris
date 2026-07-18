@@ -4,14 +4,15 @@
   "private": true,
   "description": "Iris — god-mode visibility over your home network: device discovery, live status, mDNS names, and ntfy alerts.",
   "license": "MIT",
+  "workspaces": ["server", "web"],
   "scripts": {
     "dev": "concurrently -n server,web -c blue,magenta \"npm:dev:server\" \"npm:dev:web\"",
-    "dev:server": "npm --prefix server run dev",
-    "dev:web": "npm --prefix web run dev",
-    "build": "npm --prefix server run build && npm --prefix web run build",
-    "start": "npm --prefix server run start",
-    "test": "npm --prefix server test",
-    "install:all": "npm install && npm --prefix server install && npm --prefix web install"
+    "dev:server": "npm run dev -w iris-server",
+    "dev:web": "npm run dev -w iris-web",
+    "build": "npm run build -w iris-server && npm run build -w iris-web",
+    "start": "npm run start -w iris-server",
+    "test": "npm run test -w iris-server && npm run test -w iris-web",
+    "install:all": "npm install"
   },
   "devDependencies": {
     "concurrently": "^9.1.0"

@@ -34,6 +34,8 @@ shows up — no router login, no agents on your devices, runs entirely on your M
 - **New-device alerts** — **ntfy** push to your phone the instant an unknown device
   joins. Untrusted-online count is surfaced front-and-center.
 - **Naming & trust** — rename any device, mark devices trusted.
+- **Network map** — live hub-and-spoke diagram of the gateway and every online
+  device, colored by trust status; click a node to filter the list to it.
 - **Live everything** — real-time (SSE) activity feed; auto-rescan on an interval.
 - **History** — everything persists in SQLite and survives restarts.
 
@@ -62,8 +64,8 @@ Iris sees your entire home network, so it's built to stay yours:
 ## Quick start
 
 ```bash
-npm run install:all   # install root + server + web deps
-npm run dev           # backend on 127.0.0.1:4000, dashboard on :5173
+npm install   # one npm workspace — installs server + web together
+npm run dev   # backend on 127.0.0.1:4000, dashboard on :5173
 ```
 
 Open **http://localhost:5173**. The first scan runs automatically and repeats
@@ -128,7 +130,7 @@ server/  Node + TypeScript
   scanner.ts       scan orchestration + auto-scan loop + event bus
   index.ts         Express REST API + Server-Sent-Events stream (localhost)
   *.test.ts        unit tests (node:test) for parsing + network + security logic
-web/     Vite + React + Tailwind v4 dashboard
+web/     Vite + React 19 + Tailwind v4 dashboard (NetworkMap, DeviceCard, …)
 ```
 
 ### API (localhost only)
@@ -146,12 +148,15 @@ web/     Vite + React + Tailwind v4 dashboard
 ## Tests
 
 ```bash
-npm test        # runs the server suite (Node's built-in runner, no extra deps)
+npm test        # runs both workspaces: server (node:test) + web (vitest)
 ```
 
-Covers the fiddly, easy-to-break logic: MAC/vendor normalization, subnet math,
-the hand-rolled mDNS + NetBIOS packet parsers, and the loopback Host-header
-guard. No network or database is touched, so the suite is fast and deterministic.
+- **Server** (`node:test`, no extra deps): MAC/vendor normalization, subnet math,
+  the hand-rolled mDNS + NetBIOS packet parsers, and the loopback Host-header guard.
+- **Web** (Vitest + Testing Library): device naming/icon logic and the network-map
+  component render + interaction.
+
+No real network or database is touched, so the suite is fast and deterministic.
 
 ## Roadmap
 
