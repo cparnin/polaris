@@ -140,12 +140,16 @@ export function recentEvents(limit = 100): EventRow[] {
   return recentEventsStmt.all(limit);
 }
 
+const setLabelStmt = db.prepare("UPDATE devices SET label = ? WHERE id = ?");
+const setTrustedStmt = db.prepare("UPDATE devices SET trusted = ? WHERE id = ?");
+const deleteDeviceStmt = db.prepare("DELETE FROM devices WHERE id = ?");
+
 export function setLabel(id: string, label: string | null): void {
-  db.prepare("UPDATE devices SET label = ? WHERE id = ?").run(label, id);
+  setLabelStmt.run(label, id);
 }
 
 export function setTrusted(id: string, trusted: boolean): void {
-  db.prepare("UPDATE devices SET trusted = ? WHERE id = ?").run(trusted ? 1 : 0, id);
+  setTrustedStmt.run(trusted ? 1 : 0, id);
 }
 
 const upsertDevice = db.prepare(`
@@ -211,6 +215,25 @@ export const applyScan = db.transaction((seen: SeenDevice[], now: number): ScanD
       diff.cameOnline.push(d.id);
       insertEvent.run(now, "online", d.id, JSON.stringify({ ip: d.ip }));
     }
+  }
+
+  // Reap stale IP-keyed ghosts. A device first seen before its MAC was in the
+  // ARP cache gets an "ip:<addr>" row; once its MAC is known it gets a proper
+  // MAC-keyed row, leaving the old one as a duplicate. When a MAC-identified
+  // device now owns an IP, delete any leftover "ip:<that IP>" row — carrying
+  // over the user's label / trust flag if only the ghost had it.
+  for (const d of seen) {
+    if (!d.mac) continue; // no MAC → the "ip:" row IS this device, keep it
+    const ghostId = `ip:${d.ip}`;
+    const ghost = getDevice.get(ghostId);
+    if (!ghost) continue;
+    const real = getDevice.get(d.id);
+    if (real) {
+      if (ghost.label && !real.label) setLabelStmt.run(ghost.label, d.id);
+      if (ghost.trusted && !real.trusted) setTrustedStmt.run(1, d.id);
+    }
+    deleteDeviceStmt.run(ghostId);
+    seenIds.delete(ghostId); // in case it was somehow queued for offline marking
   }
 
   // Anything currently online but not in this scan → mark offline.

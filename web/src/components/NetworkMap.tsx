@@ -127,8 +127,11 @@ export function NetworkMap({
   function onWheel(e: React.WheelEvent) {
     e.preventDefault();
     const [sx, sy] = toSvg(e.clientX, e.clientY);
-    const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12;
-    const scale = clamp(view.scale * factor, 0.4, 4);
+    // Exponential zoom keyed to scroll distance: a mouse-wheel notch (large
+    // deltaY) makes a modest step, a trackpad (many small deltas) stays smooth.
+    // Clamp per-event so a fast flick can't jump scale in one frame.
+    const step = clamp(-e.deltaY * 0.002, -0.25, 0.25);
+    const scale = clamp(view.scale * Math.exp(step), 0.5, 3);
     const worldX = (sx - view.tx) / view.scale;
     const worldY = (sy - view.ty) / view.scale;
     setView({ scale, tx: sx - worldX * scale, ty: sy - worldY * scale });
