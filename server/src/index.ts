@@ -4,7 +4,15 @@ import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isLoopbackHost } from "./security.js";
-import { listDevices, recentEvents, setLabel, setTrusted, getDeviceById, savePortScan } from "./db.js";
+import {
+  listDevices,
+  recentEvents,
+  setLabel,
+  setTrusted,
+  getDeviceById,
+  savePortScan,
+  forgetDevice,
+} from "./db.js";
 import { portScan } from "./net/portscan.js";
 import {
   runScan,
@@ -135,6 +143,17 @@ app.patch("/api/devices/:id", (req, res) => {
   const { label, trusted } = req.body ?? {};
   if (label !== undefined) setLabel(id, label === "" ? null : label);
   if (trusted !== undefined) setTrusted(id, Boolean(trusted));
+  res.json({ ok: true });
+});
+
+// Forget a device and its history (e.g. dead records from an old subnet).
+// If it's still on the network it reappears on the next scan as a new device.
+app.delete("/api/devices/:id", (req, res) => {
+  const removed = forgetDevice(req.params.id);
+  if (!removed) {
+    res.status(404).json({ error: "Unknown device" });
+    return;
+  }
   res.json({ ok: true });
 });
 

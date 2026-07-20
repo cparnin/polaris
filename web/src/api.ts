@@ -86,6 +86,10 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(patch),
     }).then(json<{ ok: boolean }>),
+  forget: (id: string) =>
+    fetch(`/api/devices/${encodeURIComponent(id)}`, { method: "DELETE" }).then(
+      json<{ ok: boolean }>
+    ),
   portScan: (id: string) =>
     fetch(`/api/devices/${encodeURIComponent(id)}/portscan`, { method: "POST" }).then(
       json<PortScanResult>

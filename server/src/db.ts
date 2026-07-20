@@ -160,9 +160,40 @@ export function setTrusted(id: string, trusted: boolean): void {
   setTrustedStmt.run(trusted ? 1 : 0, id);
 }
 
+interface GhostDupe {
+  ghost_id: string;
+  ghost_label: string | null;
+  ghost_trusted: number;
+  real_id: string;
+  real_label: string | null;
+  real_trusted: number;
+}
+
+/** "ip:<addr>" rows that duplicate a MAC-keyed row holding the same address. */
+const findGhostDuplicates = db.prepare<[], GhostDupe>(`
+  SELECT g.id AS ghost_id, g.label AS ghost_label, g.trusted AS ghost_trusted,
+         m.id AS real_id, m.label AS real_label, m.trusted AS real_trusted
+  FROM devices g
+  JOIN devices m ON m.ip = g.ip AND m.mac IS NOT NULL AND m.id <> g.id
+  WHERE g.mac IS NULL AND g.id LIKE 'ip:%'
+`);
+
 const savePortScanStmt = db.prepare(
   "UPDATE devices SET open_ports = ?, risk_count = ?, last_portscan_at = ? WHERE id = ?"
 );
+
+const deleteEventsForDeviceStmt = db.prepare("DELETE FROM events WHERE device_id = ?");
+
+/**
+ * Permanently forget a device and its activity history. Useful for clearing
+ * dead records — e.g. devices left over from a previous subnet that will never
+ * be seen again. If the device is still on the network it'll simply reappear
+ * on the next scan (as a new device).
+ */
+export function forgetDevice(id: string): boolean {
+  deleteEventsForDeviceStmt.run(id);
+  return deleteDeviceStmt.run(id).changes > 0;
+}
 
 /** Persist a device's latest port-scan so the map can show its exposure. */
 export function savePortScan(
@@ -239,23 +270,17 @@ export const applyScan = db.transaction((seen: SeenDevice[], now: number): ScanD
     }
   }
 
-  // Reap stale IP-keyed ghosts. A device first seen before its MAC was in the
-  // ARP cache gets an "ip:<addr>" row; once its MAC is known it gets a proper
-  // MAC-keyed row, leaving the old one as a duplicate. When a MAC-identified
-  // device now owns an IP, delete any leftover "ip:<that IP>" row — carrying
-  // over the user's label / trust flag if only the ghost had it.
-  for (const d of seen) {
-    if (!d.mac) continue; // no MAC → the "ip:" row IS this device, keep it
-    const ghostId = `ip:${d.ip}`;
-    const ghost = getDevice.get(ghostId);
-    if (!ghost) continue;
-    const real = getDevice.get(d.id);
-    if (real) {
-      if (ghost.label && !real.label) setLabelStmt.run(ghost.label, d.id);
-      if (ghost.trusted && !real.trusted) setTrustedStmt.run(1, d.id);
-    }
-    deleteDeviceStmt.run(ghostId);
-    seenIds.delete(ghostId); // in case it was somehow queued for offline marking
+  // Reap IP-keyed ghost duplicates. A device first seen before its MAC was in
+  // the ARP cache gets an "ip:<addr>" row; once its MAC is known it gets a
+  // proper MAC-keyed row, leaving the old one as a duplicate forever. Match on
+  // IP across the whole table (not just this scan) so ghosts left behind on an
+  // old subnet get cleaned up too. The user's label / trust flag is carried
+  // over to the surviving MAC-keyed row first.
+  for (const dupe of findGhostDuplicates.all()) {
+    if (dupe.ghost_label && !dupe.real_label) setLabelStmt.run(dupe.ghost_label, dupe.real_id);
+    if (dupe.ghost_trusted && !dupe.real_trusted) setTrustedStmt.run(1, dupe.real_id);
+    deleteDeviceStmt.run(dupe.ghost_id);
+    seenIds.delete(dupe.ghost_id); // don't also mark it offline below
   }
 
   // Anything currently online but not in this scan → mark offline.

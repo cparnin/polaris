@@ -20,6 +20,13 @@ export function DeviceDetailPanel({
 }) {
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<PortScanResult | null>(null);
+  const [confirmForget, setConfirmForget] = useState(false);
+
+  const forget = async () => {
+    await api.forget(d.id).catch(() => {});
+    onScanned(); // refresh the device list
+    onClose();
+  };
 
   // Fall back to the device's last persisted scan until a fresh one runs.
   const persistedPorts = useMemo<OpenPort[]>(() => {
@@ -156,6 +163,25 @@ export function DeviceDetailPanel({
               {ports.length} open · scanned in {(result.durationMs / 1000).toFixed(0)}s
             </p>
           )}
+        </section>
+
+        {/* forget — for clearing dead records (e.g. devices from an old subnet) */}
+        <section className="mt-auto border-t border-white/10 px-5 py-4">
+          <button
+            onClick={confirmForget ? forget : () => setConfirmForget(true)}
+            onMouseLeave={() => setConfirmForget(false)}
+            className={`w-full rounded-lg px-3 py-2 text-xs transition-colors ${
+              confirmForget
+                ? "bg-red-500 text-white hover:bg-red-400"
+                : "bg-white/5 text-zinc-400 hover:bg-red-500/20 hover:text-red-300"
+            }`}
+          >
+            {confirmForget ? "Confirm — forget this device?" : "Forget this device"}
+          </button>
+          <p className="mt-2 text-[11px] text-zinc-600">
+            Removes it and its history. If it's still on your network it reappears on the
+            next scan.
+          </p>
         </section>
       </aside>
     </div>
