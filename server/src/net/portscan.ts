@@ -24,6 +24,7 @@ export interface OpenPort {
 
 export interface PortScanResult {
   available: boolean; // is nmap installed
+  scanned: boolean; // did nmap actually complete a scan (vs. an error/skip)
   ip: string;
   scannedAt: number;
   durationMs: number;
@@ -104,6 +105,7 @@ export async function portScan(ip: string): Promise<PortScanResult> {
   const scannedAt = Date.now();
   const base: Omit<PortScanResult, "ports" | "risks" | "durationMs"> = {
     available: true,
+    scanned: false,
     ip,
     scannedAt,
     message: null,
@@ -147,6 +149,7 @@ export async function portScan(ip: string): Promise<PortScanResult> {
     if (ports.length === 0) {
       return {
         ...base,
+        scanned: true,
         durationMs: Date.now() - scannedAt,
         ports: [],
         risks: [],
@@ -172,7 +175,7 @@ export async function portScan(ip: string): Promise<PortScanResult> {
     }
 
     const risks = [...new Set(ports.map((p) => p.risk).filter((r): r is string => !!r))];
-    return { ...base, durationMs: Date.now() - scannedAt, ports, risks, message: null };
+    return { ...base, scanned: true, durationMs: Date.now() - scannedAt, ports, risks, message: null };
   } catch (err) {
     return {
       ...base,

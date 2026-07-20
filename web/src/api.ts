@@ -13,6 +13,9 @@ export interface Device {
   online: number;
   first_seen: number;
   last_seen: number;
+  open_ports: string | null; // JSON array of OpenPort, or null if never scanned
+  risk_count: number | null;
+  last_portscan_at: number | null;
 }
 
 export interface ScanSummary {
@@ -53,6 +56,7 @@ export interface OpenPort {
 
 export interface PortScanResult {
   available: boolean;
+  scanned: boolean;
   ip: string;
   scannedAt: number;
   durationMs: number;

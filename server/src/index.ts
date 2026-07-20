@@ -4,7 +4,7 @@ import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isLoopbackHost } from "./security.js";
-import { listDevices, recentEvents, setLabel, setTrusted, getDeviceById } from "./db.js";
+import { listDevices, recentEvents, setLabel, setTrusted, getDeviceById, savePortScan } from "./db.js";
 import { portScan } from "./net/portscan.js";
 import {
   runScan,
@@ -151,6 +151,11 @@ app.post("/api/devices/:id/portscan", async (req, res) => {
   }
   try {
     const result = await portScan(dev.ip);
+    // Persist so the map can badge this device by exposure without re-scanning.
+    // Only record results where nmap actually completed (clean scans included).
+    if (result.scanned) {
+      savePortScan(dev.id, result.ports, result.risks.length, result.scannedAt);
+    }
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });

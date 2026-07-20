@@ -26,6 +26,7 @@ export function DeviceCard({ device: d, isNew, onRename, onTrust }: Props) {
     } catch (err) {
       setScan({
         available: true,
+        scanned: false,
         ip: d.ip ?? "",
         scannedAt: Date.now(),
         durationMs: 0,

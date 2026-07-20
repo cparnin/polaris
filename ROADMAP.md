@@ -24,8 +24,10 @@ router access needed.
 - ✅ **Richer names for casted devices** — mDNS *service* discovery (`_googlecast`,
   `_airplay`, `_raop`, `_hap`, `_sonos`, printers) surfaces the friendly names you
   set on Chromecast/Nest, Apple TV, HomeKit, Sonos, and printers.
-- **Port & service scan** — opt-in `nmap -sV` on discovered hosts to fingerprint open
-  ports and running services; flag risky exposure (open SMB, RDP, Telnet, UPnP).
+- ✅ **Port & service scan** — opt-in `nmap -sV` per host to fingerprint open ports
+  and services and flag risky exposure (SMB, RDP, Telnet, VNC). Launch it from a
+  device's card or by clicking its node on the map; results persist and badge the
+  map node by exposure (green ✓ clean / red count risky).
 - **Rogue-device heuristics** — detect MAC spoofing (same IP, changing MAC), ARP
   anomalies, and devices impersonating the gateway (ARP-spoof / MITM detection).
 - **Presence patterns** — learn each device's normal online hours; alert on anomalies

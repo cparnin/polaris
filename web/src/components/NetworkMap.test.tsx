@@ -19,17 +19,56 @@ test("renders the gateway and online devices, and hides offline ones", () => {
   expect(screen.getByText(/2 online/)).toBeInTheDocument();
 });
 
-test("clicking a node reports the selected device", () => {
-  const onSelect = vi.fn();
+test("clicking a node asks to inspect that device", () => {
+  const onInspect = vi.fn();
   render(
     <NetworkMap
       devices={[makeDevice({ id: "tv", hostname: "Office-TV", online: 1, trusted: 1, ip: "192.168.4.7" })]}
-      onSelect={onSelect}
+      onInspect={onInspect}
     />
   );
   fireEvent.click(screen.getByText("Office-TV"));
-  expect(onSelect).toHaveBeenCalledOnce();
-  expect(onSelect.mock.calls[0][0].id).toBe("tv");
+  expect(onInspect).toHaveBeenCalledOnce();
+  expect(onInspect.mock.calls[0][0].id).toBe("tv");
+});
+
+test("shows an exposure badge for a device with risky open ports", () => {
+  render(
+    <NetworkMap
+      devices={[
+        makeDevice({
+          id: "nas",
+          hostname: "NAS-01",
+          online: 1,
+          ip: "192.168.4.50",
+          last_portscan_at: 1000,
+          risk_count: 2,
+        }),
+      ]}
+    />
+  );
+  // the node <title> spells out the risk, and the badge shows the count "2"
+  expect(screen.getByText(/NAS-01.*2 risky ports/)).toBeInTheDocument();
+  expect(screen.getByText("2")).toBeInTheDocument();
+});
+
+test("shows a clean badge for a scanned device with no risky ports", () => {
+  render(
+    <NetworkMap
+      devices={[
+        makeDevice({
+          id: "printer",
+          hostname: "Printer",
+          online: 1,
+          ip: "192.168.4.60",
+          last_portscan_at: 1000,
+          risk_count: 0,
+        }),
+      ]}
+    />
+  );
+  expect(screen.getByText(/Printer.*no risky ports/)).toBeInTheDocument();
+  expect(screen.getByText("✓")).toBeInTheDocument();
 });
 
 test("shows an empty state when nothing is online", () => {

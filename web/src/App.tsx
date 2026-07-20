@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import { api, displayName, type Device, type ScanSummary, type NetEvent, type NtfyStatus } from "./api.js";
 import { StatBar } from "./components/StatBar.js";
 import { NetworkMap } from "./components/NetworkMap.js";
+import { DeviceDetailPanel } from "./components/DeviceDetailPanel.js";
 import { DeviceCard } from "./components/DeviceCard.js";
 import { EventFeed } from "./components/EventFeed.js";
 
@@ -18,6 +19,7 @@ export default function App() {
   const [ntfy, setNtfy] = useState<NtfyStatus | null>(null);
   const [testMsg, setTestMsg] = useState<string>("");
   const [paused, setPaused] = useState(false);
+  const [inspectId, setInspectId] = useState<string | null>(null);
   const [stopped, setStopped] = useState(false);
   const [confirmQuit, setConfirmQuit] = useState(false);
 
@@ -220,7 +222,7 @@ export default function App() {
 
       <StatBar devices={devices} />
 
-      <NetworkMap devices={devices} onSelect={(d) => setQuery(displayName(d))} />
+      <NetworkMap devices={devices} onInspect={(d) => setInspectId(d.id)} />
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_340px]">
         {/* Devices */}
@@ -277,6 +279,14 @@ export default function App() {
         Polaris · Phase 2 · Visibility + Alerts. Rename devices, mark trusted, get pinged when
         something new joins.
       </footer>
+
+      {inspectId && byId.get(inspectId) && (
+        <DeviceDetailPanel
+          device={byId.get(inspectId)!}
+          onClose={() => setInspectId(null)}
+          onScanned={refresh}
+        />
+      )}
     </div>
   );
 }

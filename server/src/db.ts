@@ -66,6 +66,11 @@ function addColumnIfMissing(table: string, column: string, type: string): void {
   }
 }
 addColumnIfMissing("devices", "os_guess", "TEXT");
+// Persisted port-scan results, so the map can badge devices by exposure without
+// re-running nmap on every load.
+addColumnIfMissing("devices", "open_ports", "TEXT"); // JSON array of OpenPort
+addColumnIfMissing("devices", "risk_count", "INTEGER");
+addColumnIfMissing("devices", "last_portscan_at", "INTEGER");
 
 export interface DeviceRow {
   id: string;
@@ -82,6 +87,9 @@ export interface DeviceRow {
   online: number;
   first_seen: number;
   last_seen: number;
+  open_ports: string | null; // JSON array of OpenPort, or null if never scanned
+  risk_count: number | null;
+  last_portscan_at: number | null;
 }
 
 export interface EventRow {
@@ -150,6 +158,20 @@ export function setLabel(id: string, label: string | null): void {
 
 export function setTrusted(id: string, trusted: boolean): void {
   setTrustedStmt.run(trusted ? 1 : 0, id);
+}
+
+const savePortScanStmt = db.prepare(
+  "UPDATE devices SET open_ports = ?, risk_count = ?, last_portscan_at = ? WHERE id = ?"
+);
+
+/** Persist a device's latest port-scan so the map can show its exposure. */
+export function savePortScan(
+  id: string,
+  ports: unknown[],
+  riskCount: number,
+  scannedAt: number
+): void {
+  savePortScanStmt.run(JSON.stringify(ports), riskCount, scannedAt, id);
 }
 
 const upsertDevice = db.prepare(`

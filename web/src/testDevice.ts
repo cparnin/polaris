@@ -17,6 +17,9 @@ export function makeDevice(overrides: Partial<Device> = {}): Device {
     online: 1,
     first_seen: 0,
     last_seen: 0,
+    open_ports: null,
+    risk_count: null,
+    last_portscan_at: null,
     ...overrides,
   };
 }

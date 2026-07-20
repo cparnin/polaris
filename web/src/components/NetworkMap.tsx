@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import type { Device } from "../api.js";
 import { displayName } from "../api.js";
-import { deviceIcon } from "../deviceMeta.js";
+import { deviceIcon, scanStatus } from "../deviceMeta.js";
 
 /** Trust status → ring color + legend label. Also encoded by tier/group/icon,
  *  so the map never relies on color alone. */
@@ -65,15 +65,16 @@ function clamp(v: number, lo: number, hi: number): number {
 /**
  * Tiered network topology: Internet / ISP → your gateway → the LAN, with
  * devices clustered into Trusted / Untrusted zones. Scroll to zoom, drag to
- * pan, click a device to filter the list to it, and collapse a zone to tidy a
- * busy network.
+ * pan, collapse a zone, and click a device to inspect it (identity + port
+ * scan). Nodes carry an exposure badge once scanned, so the whole map reads as
+ * a live security view.
  */
 export function NetworkMap({
   devices,
-  onSelect,
+  onInspect,
 }: {
   devices: Device[];
-  onSelect?: (d: Device) => void;
+  onInspect?: (d: Device) => void;
 }) {
   const [open, setOpen] = useState(true);
   const [hover, setHover] = useState<string | null>(null);
@@ -166,8 +167,9 @@ export function NetworkMap({
   }
   const resetView = () => setView({ tx: 0, ty: 0, scale: 1 });
 
-  const guardedSelect = (d: Device) => {
-    if (!moved.current) onSelect?.(d);
+  // Suppress the click that ends a pan drag so panning doesn't open the panel.
+  const guardedInspect = (d: Device) => {
+    if (!moved.current) onInspect?.(d);
   };
 
   return (
@@ -209,7 +211,7 @@ export function NetworkMap({
               <MapBtn label="⤢" title="Reset view" onClick={resetView} />
             </div>
             <span className="pointer-events-none absolute bottom-2 left-4 z-10 text-[11px] text-zinc-600">
-              scroll to zoom · drag to pan · click a device to filter
+              scroll to zoom · drag to pan · click a device to inspect &amp; scan ports
             </span>
 
             <svg
@@ -252,7 +254,7 @@ export function NetworkMap({
                     r={30}
                     hover={hover}
                     setHover={setHover}
-                    onSelect={guardedSelect}
+                    onInspect={guardedInspect}
                   />
                 )}
 
@@ -304,7 +306,7 @@ export function NetworkMap({
                             r={22}
                             hover={hover}
                             setHover={setHover}
-                            onSelect={guardedSelect}
+                            onInspect={guardedInspect}
                           />
                         );
                       })}
@@ -366,7 +368,7 @@ function DeviceNode({
   r,
   hover,
   setHover,
-  onSelect,
+  onInspect,
 }: {
   d: Device;
   x: number;
@@ -374,25 +376,42 @@ function DeviceNode({
   r: number;
   hover: string | null;
   setHover: (id: string | null) => void;
-  onSelect: (d: Device) => void;
+  onInspect: (d: Device) => void;
 }) {
   const status = statusOf(d);
   const color = STATUS[status].ring;
   const active = hover === d.id;
   const name = displayName(d);
+  const scan = scanStatus(d);
   return (
     <g
       transform={`translate(${x} ${y})`}
       className="cursor-pointer"
       onMouseEnter={() => setHover(d.id)}
       onMouseLeave={() => setHover(null)}
-      onClick={() => onSelect(d)}
+      onClick={() => onInspect(d)}
     >
-      <title>{`${name}${d.ip ? ` · ${d.ip}` : ""}`}</title>
+      <title>
+        {`${name}${d.ip ? ` · ${d.ip}` : ""}` +
+          (scan.status === "risky"
+            ? ` · ${scan.riskCount} risky port${scan.riskCount > 1 ? "s" : ""}`
+            : scan.status === "clean"
+              ? " · no risky ports"
+              : "")}
+      </title>
       <circle r={r} fill="#0b0d12" stroke={color} strokeWidth={active ? 3 : 2} opacity={active ? 1 : 0.9} />
       <text textAnchor="middle" dominantBaseline="central" fontSize={r > 26 ? 26 : 20}>
         {deviceIcon(d)}
       </text>
+      {/* exposure badge: red count = risky ports, green ✓ = scanned clean */}
+      {scan.status !== "unscanned" && (
+        <g transform={`translate(${r * 0.72} ${-r * 0.72})`}>
+          <circle r={9} fill={scan.status === "risky" ? "#ef4444" : "#10b981"} stroke="#0b0d12" strokeWidth={1.5} />
+          <text textAnchor="middle" dominantBaseline="central" fontSize={scan.status === "risky" ? 11 : 12} fontWeight={700} fill="#0b0d12">
+            {scan.status === "risky" ? scan.riskCount : "✓"}
+          </text>
+        </g>
+      )}
       <text
         textAnchor="middle"
         y={r + 14}

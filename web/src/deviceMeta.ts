@@ -23,6 +23,15 @@ export function deviceIcon(d: Device): string {
   return "❔";
 }
 
+export type ScanStatus = "unscanned" | "clean" | "risky";
+
+/** Port-scan exposure status for a device, derived from its persisted scan. */
+export function scanStatus(d: Device): { status: ScanStatus; riskCount: number } {
+  if (d.last_portscan_at == null) return { status: "unscanned", riskCount: 0 };
+  const riskCount = d.risk_count ?? 0;
+  return { status: riskCount > 0 ? "risky" : "clean", riskCount };
+}
+
 export function relTime(ts: number): string {
   const s = Math.floor((Date.now() - ts) / 1000);
   if (s < 60) return `${s}s ago`;

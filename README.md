@@ -38,7 +38,12 @@ shows up — no router login, no agents on your devices, runs entirely on your M
   while keeping the dashboard live; **⏻ Quit** stops Polaris entirely from the header.
 - **Network map** — live tiered topology: Internet / ISP → your gateway → the
   LAN, with devices clustered into Trusted / Untrusted zones. Scroll to zoom,
-  drag to pan, collapse a zone, and click a device to filter the list to it.
+  drag to pan, collapse a zone, and click a device to inspect it.
+- **Port & service scan** — click a device (on the map or its card) to run an
+  opt-in `nmap -sV` scan: open ports, detected services, and risky-exposure flags
+  (SMB, RDP, Telnet, VNC). Results persist and badge the map node by exposure
+  (green ✓ = scanned clean, red count = risky ports) so the whole map reads as a
+  live security view.
 - **Live everything** — real-time (SSE) activity feed; auto-rescan on an interval.
 - **History** — everything persists in SQLite and survives restarts.
 
@@ -158,6 +163,8 @@ web/     Vite + React 19 + Tailwind v4 dashboard (NetworkMap, DeviceCard, …)
 | POST   | `/api/scan`          | trigger a scan now               |
 | POST   | `/api/notify/test`   | send a test ntfy push            |
 | PATCH  | `/api/devices/:id`   | set `label` / `trusted`          |
+| POST   | `/api/devices/:id/portscan` | nmap service scan of one device |
+| POST   | `/api/pause` · `/api/resume` | pause / resume auto-scanning |
 | GET    | `/api/stream`        | SSE: scan lifecycle events       |
 
 ## Tests
