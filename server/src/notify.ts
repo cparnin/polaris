@@ -147,3 +147,36 @@ export function buildNewDeviceAlert(
     priority: risky ? "urgent" : "high",
   };
 }
+
+/**
+ * Periodic "still here" push.
+ *
+ * Without this, a dead Polaris is indistinguishable from a quiet network: both
+ * produce no notifications. That is the failure mode of any unattended monitor,
+ * and the whole reason to send a message when nothing is wrong.
+ */
+export function buildHeartbeatAlert(stats: {
+  online: number;
+  total: number;
+  newSince: number;
+  risky: number;
+  days: number;
+}): NtfyMessage {
+  const lines = [
+    `${stats.online} of ${stats.total} devices online`,
+    `${stats.newSince} new in the last ${stats.days} day${stats.days === 1 ? "" : "s"}`,
+  ];
+  if (stats.risky > 0) {
+    lines.push(`${stats.risky} device${stats.risky === 1 ? "" : "s"} with risky open ports`);
+  }
+  lines.push("");
+  lines.push("You are getting this so silence stays meaningful:");
+  lines.push("no heartbeat means Polaris stopped, not that all is well.");
+
+  return {
+    title: `Polaris is running: ${stats.online} devices online`,
+    message: lines.join("\n"),
+    tags: ["satellite"],
+    priority: "low",
+  };
+}

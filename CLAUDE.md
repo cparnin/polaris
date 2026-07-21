@@ -36,6 +36,9 @@ production build: **a single ~80MB Node process on http://127.0.0.1:4000**.
   that and exits cleanly instead of throwing a stack trace that looks like a crash.
 - Logs: `~/Library/Logs/polaris-dashboard.log` (+ `.err.log`)
 - The UI also has **⏸ Pause** (stop scanning) and **⏻ Quit** (stop everything).
+- **A heartbeat push goes out every `HEARTBEAT_DAYS` (default 7).** Without it,
+  a dead Polaris and a quiet network look identical: both send nothing. The
+  timestamp lives in the `meta` table so restarts neither re-send nor lose it.
 - New devices are auto port-scanned on arrival (`AUTOSCAN_NEW_DEVICES=0` to
   disable), and the finding is folded into the ntfy alert.
 

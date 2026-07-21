@@ -10,7 +10,9 @@ import {
   type ScanDiff,
 } from "./db.js";
 import { portScan, type PortScanResult } from "./net/portscan.js";
-import { notifyNewDevice, isNtfyConfigured } from "./notify.js";
+import { notifyNewDevice, isNtfyConfigured, sendNtfy, buildHeartbeatAlert } from "./notify.js";
+import { getMeta, setMeta } from "./db.js";
+import { resolveCount, applyResolved } from "./config.js";
 
 export interface ScanSummary {
   startedAt: number;
@@ -64,6 +66,18 @@ async function handleNewDevices(ids: string[]): Promise<void> {
     }
   }
 }
+
+/**
+ * How often to send a "still running" push. 0 disables it.
+ *
+ * A monitor that only speaks when something is wrong cannot be trusted after a
+ * long silence: you cannot tell a quiet network from a dead process. This is
+ * the cheapest possible fix, and it is why the default is on.
+ */
+const HEARTBEAT_DAYS = applyResolved(
+  resolveCount("HEARTBEAT_DAYS", process.env.HEARTBEAT_DAYS, 7, { min: 0, max: 90 })
+);
+const HEARTBEAT_KEY = "lastHeartbeatAt";
 
 let scanning = false;
 let paused = false;
@@ -195,6 +209,9 @@ export async function runScan(): Promise<ScanSummary> {
     };
     lastSummary = summary;
     scanBus.emit("scan:done", summary);
+    void maybeHeartbeat(now).catch((e: Error) =>
+      console.error("[heartbeat] failed:", e.message)
+    );
     return summary;
   } catch (err) {
     scanBus.emit("scan:error", err);
@@ -236,4 +253,36 @@ export function startAutoScan(intervalMs: number): void {
 export function stopAutoScan(): void {
   if (timer) clearInterval(timer);
   timer = null;
+}
+
+/**
+ * Send the periodic "still running" push when one is due.
+ *
+ * The timestamp lives in the DB, not memory, so restarts neither re-send it
+ * every boot nor lose track of it. On the very first run we record "now"
+ * without sending, so installing Polaris does not immediately push at you.
+ */
+async function maybeHeartbeat(now: number): Promise<void> {
+  if (HEARTBEAT_DAYS === 0 || !isNtfyConfigured()) return;
+
+  const last = Number(getMeta(HEARTBEAT_KEY));
+  if (!Number.isFinite(last) || last <= 0) {
+    setMeta(HEARTBEAT_KEY, String(now));
+    return;
+  }
+  const dueAfter = HEARTBEAT_DAYS * 86_400_000;
+  if (now - last < dueAfter) return;
+
+  const devices = listDevices();
+  const stats = {
+    online: devices.filter((d) => d.online === 1).length,
+    total: devices.length,
+    newSince: devices.filter((d) => d.first_seen >= last).length,
+    risky: devices.filter((d) => (d.risk_count ?? 0) > 0).length,
+    days: HEARTBEAT_DAYS,
+  };
+  // Record first: a failed send should not queue up a burst of retries, and a
+  // missed heartbeat is itself the signal that something is wrong.
+  setMeta(HEARTBEAT_KEY, String(now));
+  await sendNtfy(buildHeartbeatAlert(stats));
 }

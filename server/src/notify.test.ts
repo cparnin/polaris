@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { headerSafe, buildNewDeviceAlert } from "./notify.js";
+import { headerSafe, buildNewDeviceAlert, buildHeartbeatAlert } from "./notify.js";
 import type { DeviceRow } from "./db.js";
 import type { PortScanResult } from "./net/portscan.js";
 
@@ -106,4 +106,21 @@ test("the alert does not claim a device is new to the NETWORK", () => {
   const msg = buildNewDeviceAlert(device({ hostname: "Thermostat" }), null);
   assert.doesNotMatch(msg.title, /on your network/i);
   assert.match(msg.title, /New device seen/);
+});
+
+test("the heartbeat says enough to be worth receiving", () => {
+  // A monitor that only speaks on bad news is untrustworthy after a long
+  // silence: you cannot tell a quiet network from a dead process.
+  const msg = buildHeartbeatAlert({ online: 22, total: 26, newSince: 1, risky: 2, days: 7 });
+  assert.match(msg.title, /22/);
+  assert.match(msg.message, /22 of 26 devices online/);
+  assert.match(msg.message, /1 new in the last 7 days/);
+  assert.match(msg.message, /2 devices with risky open ports/);
+  assert.equal(msg.priority, "low", "routine news must not buzz like an alert");
+});
+
+test("the heartbeat stays quiet about risks when there are none", () => {
+  const msg = buildHeartbeatAlert({ online: 5, total: 5, newSince: 0, risky: 0, days: 1 });
+  assert.doesNotMatch(msg.message, /risky/);
+  assert.match(msg.message, /0 new in the last 1 day$/m, "singular day, no trailing s");
 });

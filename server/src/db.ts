@@ -59,6 +59,28 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_events_ts ON events(ts DESC);
 `);
 
+// Small key/value store for state that must survive restarts, like when the
+// last heartbeat was sent. Without persistence, a daily restart would either
+// re-send it every boot or never send it at all.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS meta (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  )
+`);
+
+const getMetaStmt = db.prepare<[string], { value: string }>("SELECT value FROM meta WHERE key = ?");
+const setMetaStmt = db.prepare(
+  "INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value"
+);
+
+export function getMeta(key: string): string | null {
+  return getMetaStmt.get(key)?.value ?? null;
+}
+export function setMeta(key: string, value: string): void {
+  setMetaStmt.run(key, value);
+}
+
 // --- lightweight migrations (safe to run every boot) ---
 function addColumnIfMissing(table: string, column: string, type: string): void {
   const cols = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
