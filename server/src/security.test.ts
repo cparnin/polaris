@@ -25,7 +25,7 @@ test("isLoopbackHost rejects hostnames that merely START with 127.", () => {
   // The bug this pins: `host.startsWith("127.")` accepted all of these. An
   // attacker points 127.0.0.1.evil.com at loopback, and their page is then
   // same-origin with Polaris and can read the whole network map.
-  // 127.0.0.1.nip.io already resolves to 127.0.0.1 publicly — no setup needed.
+  // 127.0.0.1.nip.io already resolves to 127.0.0.1 publicly - no setup needed.
   for (const h of [
     "127.0.0.1.evil.com",
     "127.0.0.1.evil.com:4000",

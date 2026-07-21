@@ -10,7 +10,7 @@ import { request } from "node:http";
 /**
  * End-to-end tests for the "who is allowed to talk to me" layer.
  *
- * These are the highest-consequence guarantees Polaris makes — the API serves a
+ * These are the highest-consequence guarantees Polaris makes - the API serves a
  * complete inventory of your home network, and one route shells out to
  * `launchctl bootout`. Both guards had real holes, and unit tests on the pure
  * functions don't prove the middleware is actually wired into the request path
@@ -29,7 +29,7 @@ let server: ChildProcess;
  * Issue a request with an arbitrary Host header.
  *
  * fetch() cannot do this: `Host` is a forbidden header name in the spec, so
- * undici silently drops it and the request goes out with the real host — which
+ * undici silently drops it and the request goes out with the real host - which
  * makes a rebinding test quietly pass no matter what the server does. Raw
  * node:http is the only way to actually spoof it.
  */
@@ -84,7 +84,7 @@ test("rejects a non-loopback Host header", async () => {
 
 test("rejects a hostname that merely starts with 127. (DNS rebinding)", async () => {
   // The exact bypass that shipped: `host.startsWith("127.")` accepted this, so
-  // a page served from 127.0.0.1.evil.com — rebound to loopback — was
+  // a page served from 127.0.0.1.evil.com - rebound to loopback - was
   // same-origin with Polaris and could read the whole device inventory.
   for (const host of ["127.0.0.1.evil.com", "127.evil.com", "127.0.0.1.nip.io"]) {
     assert.equal(await getWithHost("/api/devices", host), 403, `${host} must be refused`);
@@ -140,7 +140,7 @@ test("allows the dashboard's own same-origin POSTs", async () => {
 });
 
 test("a hostile ?limit can neither dump the table nor leak a stack trace", async () => {
-  // `?limit=-1` became SQL `LIMIT -1` — unbounded. `?limit=abc` reached SQLite
+  // `?limit=-1` became SQL `LIMIT -1` - unbounded. `?limit=abc` reached SQLite
   // as NaN and threw, and NODE_ENV is unset under launchd, so Express answered
   // with a full stack trace including absolute filesystem paths.
   const neg = await fetch(`${BASE}/api/events?limit=-1`);
@@ -181,7 +181,7 @@ test("static file serving has no path traversal", async () => {
 });
 
 test("guest mode mutes alerts on a timer and validates its input", async () => {
-  // Guests' phones use randomized MACs, so per-device allowlisting can't work —
+  // Guests' phones use randomized MACs, so per-device allowlisting can't work -
   // the friend you approved last month arrives as a new device today. A
   // time-boxed mute is the honest mechanism, so it must actually expire.
   const on = await fetch(`${BASE}/api/guest-mode`, {

@@ -6,7 +6,7 @@ import { deviceIcon } from "../deviceMeta.js";
  * Bulk naming screen.
  *
  * Naming devices one at a time meant hunting each card down in the grid, and
- * the useful names live in the router's app — so you're cross-referencing two
+ * the useful names live in the router's app - so you're cross-referencing two
  * screens. This puts every device in one list, unnamed first, with the vendor
  * and MAC visible (the two things you match against) and a field you can tab
  * straight through.
@@ -34,7 +34,7 @@ export function NameDevices({
 
   useEffect(() => firstInput.current?.focus(), []);
 
-  // Unnamed first — that's the work to be done — then by IP within each group.
+  // Unnamed first - that's the work to be done - then by IP within each group.
   const rows = useMemo(() => {
     const byIp = (a: Device, b: Device) =>
       (a.ip ?? "").localeCompare(b.ip ?? "", undefined, { numeric: true });
@@ -122,7 +122,7 @@ export function NameDevices({
         </ul>
 
         <footer className="border-t border-white/10 px-5 py-3 text-[11px] text-zinc-500">
-          Saves as you go — Tab to the next device, Esc to close.
+          Saves as you go - Tab to the next device, Esc to close.
         </footer>
       </div>
     </div>

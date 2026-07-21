@@ -40,7 +40,7 @@ test("drops control characters to prevent header injection", () => {
 
 test("new-device alert without a scan keeps the plain headline", () => {
   const a = buildNewDeviceAlert(device());
-  // Deliberately NOT "on your network" — see the claim-accuracy test below.
+  // Deliberately NOT "on your network" - see the claim-accuracy test below.
   assert.match(a.title, /^New device seen: guest-phone$/);
   assert.equal(a.priority, "high");
   assert.match(a.message, /192\.168\.4\.61/);
@@ -64,8 +64,8 @@ test("new-device alert leads with the exposure count and escalates priority", ()
   const a = buildNewDeviceAlert(
     device({ hostname: "sketchy-nas" }),
     scanResult({
-      ports: [{ port: 23, proto: "tcp", service: "telnet", product: null, risk: "Telnet — unencrypted remote login, should not be open" }],
-      risks: ["Telnet — unencrypted remote login, should not be open", "SMB/Windows file sharing exposed"],
+      ports: [{ port: 23, proto: "tcp", service: "telnet", product: null, risk: "Telnet - unencrypted remote login, should not be open" }],
+      risks: ["Telnet - unencrypted remote login, should not be open", "SMB/Windows file sharing exposed"],
     })
   );
   assert.match(a.title, /New device \(2 risky ports\): sketchy-nas/);
@@ -80,7 +80,7 @@ test("a clean scan says so explicitly", () => {
 });
 
 test("an unnamed device's alert says how to identify it", () => {
-  // "New device on your network: Intel Corporate · .59" is a dead end — the
+  // "New device on your network: Intel Corporate · .59" is a dead end - the
   // recipient has no way to act on it. The router holds the DHCP hostname that
   // Polaris can never see, so point there.
   const msg = buildNewDeviceAlert(

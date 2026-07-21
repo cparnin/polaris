@@ -5,7 +5,7 @@ import dgram from "node:dgram";
  *
  * Many devices (Macs, iPhones, printers, Chromecast/Nest, Sonos, smart-home
  * gear) answer a reverse PTR query for their IP over mDNS with a friendly
- * ".local" hostname — e.g. "Chads-MacBook-Pro.local", "Living-Room-Nest.local".
+ * ".local" hostname - e.g. "Chads-MacBook-Pro.local", "Living-Room-Nest.local".
  * Home routers rarely provide reverse DNS, so this is where real device names
  * come from. We hand-roll the DNS packet so we don't need a native dependency.
  */
@@ -33,7 +33,7 @@ function encodeReverseQuery(ip: string): Buffer {
  * Read a DNS name, following compression pointers.
  *
  * Every read is bounds-checked against the buffer. These packets arrive from
- * anyone who can reach the machine — the socket is bound on all interfaces —
+ * anyone who can reach the machine - the socket is bound on all interfaces -
  * and this runs on the same single thread that serves the API and the scan
  * loop, so a parser that spins on malformed input is a remote CPU-denial bug,
  * not just a correctness one. Bailing out on the first out-of-range read keeps
@@ -73,7 +73,7 @@ export function parsePtrAnswer(buf: Buffer): string | null {
   const an = buf.readUInt16BE(6);
   let pos = 12;
   // Trust qdcount/ancount only as far as the buffer goes. A 12-byte packet
-  // claiming qdcount=65535 otherwise costs 110ms of event loop — ~9 of those a
+  // claiming qdcount=65535 otherwise costs 110ms of event loop - ~9 of those a
   // second pins the process that also serves the dashboard.
   for (let i = 0; i < qd && pos < buf.length; i++) {
     const [, after] = readName(buf, pos);
@@ -122,9 +122,9 @@ const SERVICE_TYPES = [
   "_amzn-wplay._tcp.local", // Amazon Fire TV / some Echo
   "_ipp._tcp.local", // network printers (IPP)
   "_printer._tcp.local", // network printers (LPD)
-  "_device-info._tcp.local", // Apple devices — model + often the set name
-  "_companion-link._tcp.local", // Apple Continuity — device name
-  "_workstation._tcp.local", // Avahi/Linux, some NAS — hostname
+  "_device-info._tcp.local", // Apple devices - model + often the set name
+  "_companion-link._tcp.local", // Apple Continuity - device name
+  "_workstation._tcp.local", // Avahi/Linux, some NAS - hostname
   "_smb._tcp.local", // file shares (Macs, NAS)
   "_ssh._tcp.local", // servers / NAS / Raspberry Pi
   "_googlezone._tcp.local", // Google Home speaker groups
@@ -223,10 +223,10 @@ function parseServiceResponse(buf: Buffer): ServiceName | null {
       if (!model) model = txt.md || txt.am || txt.model || null;
       if (!instance) instance = instanceFriendly(r.name);
     } else if (r.type === 33) {
-      // SRV — record name is the instance
+      // SRV - record name is the instance
       if (!instance) instance = instanceFriendly(r.name);
     } else if (r.type === 12) {
-      // PTR — rdata target is the instance
+      // PTR - rdata target is the instance
       const [target] = readName(buf, r.rdStart);
       if (!instance && target.includes("._")) instance = instanceFriendly(target);
     }
@@ -269,7 +269,7 @@ export async function mdnsServiceBatch(timeoutMs = 2500): Promise<Map<string, Se
           existing.model = info.model; // enrich model from a later packet
         }
       } catch {
-        /* malformed packet — ignore */
+        /* malformed packet - ignore */
       }
     });
     sock.on("error", finish);
@@ -321,7 +321,7 @@ export async function mdnsReverseBatch(
         const name = parsePtrAnswer(msg);
         if (name) result.set(rinfo.address, cleanName(name));
       } catch {
-        /* malformed packet — ignore */
+        /* malformed packet - ignore */
       }
     });
     sock.on("error", finish);

@@ -3,7 +3,7 @@
 # (~/Library/LaunchAgents/com.polaris.dashboard.plist) so it auto-starts at login.
 #
 # Runs the LEAN PRODUCTION build: one Node process serving both the API and the
-# compiled dashboard on http://127.0.0.1:4000 — no Vite dev server, no bundler,
+# compiled dashboard on http://127.0.0.1:4000 - no Vite dev server, no bundler,
 # no file-watchers (~80MB instead of ~200MB). launchd gives us a minimal
 # environment, so set an explicit PATH for Homebrew node/npm first.
 export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
@@ -26,5 +26,5 @@ if [ ! -f server/dist/index.js ] || [ ! -f web/dist/index.html ]; then
 fi
 
 # exec Node directly (not `npm start`) so the running service is a SINGLE ~80MB
-# process — `npm start` would leave two extra npm wrapper shells resident.
+# process - `npm start` would leave two extra npm wrapper shells resident.
 exec node server/dist/index.js

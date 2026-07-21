@@ -59,7 +59,7 @@ test("a missing .env is not fatal", () => {
 test("strips trailing inline comments from unquoted values", () => {
   // Without this, NTFY_URL keeps the comment, new URL() still parses a valid
   // .host, ntfyStatus() reports "configured", and every notification 404s to
-  // the console — the exact silent failure .env loading was added to end.
+  // the console - the exact silent failure .env loading was added to end.
   const dir = mkdtempSync(join(tmpdir(), "polaris-env-"));
   const file = join(dir, ".env");
   try {

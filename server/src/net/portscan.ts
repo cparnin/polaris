@@ -8,7 +8,7 @@ const pexec = promisify(execFile);
  * Opt-in port / service scan of a SINGLE host via nmap -sV.
  *
  * Reverse-mDNS and MAC vendor give a device's identity; a service scan tells
- * you what it's actually *exposing* — open ports, running services, and risky
+ * you what it's actually *exposing* - open ports, running services, and risky
  * surfaces (Telnet, SMB, RDP, VNC) worth knowing about on your own LAN. This
  * is deliberately per-device and on-demand: nmap -sV is slow and noisy, so we
  * never run it automatically across the whole subnet.
@@ -24,7 +24,7 @@ export interface OpenPort {
    * actually identified on the wire.
    *
    * This matters more than it sounds. nmap prints the historical registered
-   * name for a port whether or not anything confirmed it — so an eero serving
+   * name for a port whether or not anything confirmed it - so an eero serving
    * TLS on 3001 comes back as "ssl/nessus", because 3001 was Nessus's port in
    * the 2000s. Rendering that identically to a real detection tells you a
    * vulnerability scanner is running on your router. It isn't.
@@ -60,7 +60,7 @@ export async function nmapAvailable(): Promise<boolean> {
 }
 
 /**
- * Data stores that have no business listening on a home LAN — most ship with
+ * Data stores that have no business listening on a home LAN - most ship with
  * no authentication by default, so an open port is effectively open data.
  */
 const DATA_STORES: Record<number, string> = {
@@ -83,33 +83,33 @@ export function riskFor(port: number, service: string | null): string | null {
 
   // --- remote access ---
   if (port === 23 || port === 2323 || s.includes("telnet"))
-    return "Telnet — unencrypted remote login, should not be open";
+    return "Telnet - unencrypted remote login, should not be open";
   if (port === 3389 || s.includes("ms-wbt") || s.includes("rdp")) return "Remote Desktop (RDP) exposed";
   if (port === 5900 || s.includes("vnc")) return "VNC remote desktop exposed";
   if (port === 5555 || s.includes("adb")) return "Android Debug Bridge (adb) exposed";
   if (port === 2375 || port === 2376 || s.includes("docker"))
-    return "Docker API exposed — commonly unauthenticated root access";
+    return "Docker API exposed - commonly unauthenticated root access";
 
   // --- file sharing / transfer ---
   if (port === 445 || port === 139 || s.includes("smb") || s.includes("microsoft-ds") || s.includes("netbios"))
     return "SMB/Windows file sharing exposed";
-  if (port === 21 || s === "ftp") return "FTP — often unencrypted or anonymous";
-  if (port === 69 || s === "tftp") return "TFTP — unauthenticated file transfer";
+  if (port === 21 || s === "ftp") return "FTP - often unencrypted or anonymous";
+  if (port === 69 || s === "tftp") return "TFTP - unauthenticated file transfer";
   if (port === 873 || s.includes("rsync")) return "rsync daemon exposed";
   if (port === 2049 || port === 111 || s.includes("nfs") || s.includes("rpcbind"))
-    return "NFS/rpcbind exposed — network file shares";
+    return "NFS/rpcbind exposed - network file shares";
 
   // --- printing (unauthenticated by design) ---
   if (port === 9100 || s.includes("jetdirect"))
-    return "Raw printing (JetDirect) — unauthenticated printing and job access";
-  if (port === 515 || s === "printer") return "LPD printing — legacy and unauthenticated";
+    return "Raw printing (JetDirect) - unauthenticated printing and job access";
+  if (port === 515 || s === "printer") return "LPD printing - legacy and unauthenticated";
 
   // --- IoT / management ---
-  if (port === 1900 || s.includes("upnp")) return "UPnP exposed — a common IoT attack surface";
+  if (port === 1900 || s.includes("upnp")) return "UPnP exposed - a common IoT attack surface";
   if (port === 161 || port === 162 || s.includes("snmp"))
-    return "SNMP exposed — frequently left on default community strings";
+    return "SNMP exposed - frequently left on default community strings";
   if (port === 1883 || port === 8883 || s.includes("mqtt"))
-    return "MQTT broker exposed — IoT control messages";
+    return "MQTT broker exposed - IoT control messages";
   if (port === 37777 || port === 554 || s.includes("rtsp")) return "Camera/RTSP stream exposed";
 
   // --- data stores ---
@@ -163,7 +163,7 @@ export function parsePorts(stdout: string): OpenPort[] {
       service,
       product,
       guessed,
-      // Never let a guessed NAME raise an alarm — port-based rules still apply,
+      // Never let a guessed NAME raise an alarm - port-based rules still apply,
       // so a genuinely risky port is still flagged on its number alone.
       risk: riskFor(port, guessed ? null : service),
     });
@@ -192,7 +192,7 @@ export async function portScan(ip: string): Promise<PortScanResult> {
       durationMs: Date.now() - scannedAt,
       ports: [],
       risks: [],
-      message: "nmap is not installed — run: brew install nmap",
+      message: "nmap is not installed - run: brew install nmap",
     };
   }
 
@@ -233,7 +233,7 @@ export async function portScan(ip: string): Promise<PortScanResult> {
 
     // Phase 2 (best-effort): enrich with product/version on just the open
     // ports. Some services (printer jetdirect/LPD, IoT) never answer version
-    // probes and stall, so this is capped and non-fatal — on failure we keep
+    // probes and stall, so this is capped and non-fatal - on failure we keep
     // the fast phase-1 result rather than losing everything.
     try {
       const portList = ports.map((p) => p.port).join(",");
@@ -245,7 +245,7 @@ export async function portScan(ip: string): Promise<PortScanResult> {
       const enriched = parsePorts(ver);
       if (enriched.length) ports = enriched;
     } catch {
-      /* version probe stalled — keep the fast phase-1 ports */
+      /* version probe stalled - keep the fast phase-1 ports */
     }
 
     const risks = [...new Set(ports.map((p) => p.risk).filter((r): r is string => !!r))];

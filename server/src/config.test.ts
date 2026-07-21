@@ -20,7 +20,7 @@ test("resolveInterval rejects values that would make setInterval spin", () => {
 
 test("resolveInterval rejects values past the timer ceiling", () => {
   // The floor alone isn't enough: an extra-zeros typo overflows the timer and
-  // Node silently clamps the delay to 1ms — the same runaway, other end.
+  // Node silently clamps the delay to 1ms - the same runaway, other end.
   for (const raw of ["3000000000", "2147483648", "1e999"]) {
     const r = resolveInterval(raw);
     assert.equal(r.value, 300_000, `${raw} should fall back`);

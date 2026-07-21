@@ -1,4 +1,4 @@
-# Polaris — working notes
+# Polaris - working notes
 
 Home-network visibility + security tool. Discovers every device on the LAN,
 names them, maps the topology, and port-scans them for risky exposure.
@@ -27,11 +27,11 @@ production build: **a single ~80MB Node process on http://127.0.0.1:4000**.
 
 - **`./polaris` (repo root) is the start/stop switch:**
   `./polaris` (status) · `start` · `stop` · `restart` · `rebuild` · `logs` ·
-  `open` · `install` · `uninstall`. It's the only control script — it wraps the
+  `open` · `install` · `uninstall`. It's the only control script - it wraps the
   `launchctl gui/$(id -u)/...` syntax. Never call `launchctl` directly.
 - **Production is NOT hot-reload.** After changing code: **`./polaris rebuild`**
   (= `npm run build` + restart).
-- **Don't run `scripts/polaris-start.sh` by hand** — it's the launchd wrapper.
+- **Don't run `scripts/polaris-start.sh` by hand** - it's the launchd wrapper.
   launchd already holds :4000, so a manual run hits `EADDRINUSE`. It now detects
   that and exits cleanly instead of throwing a stack trace that looks like a crash.
 - Logs: `~/Library/Logs/polaris-dashboard.log` (+ `.err.log`)
@@ -42,17 +42,17 @@ production build: **a single ~80MB Node process on http://127.0.0.1:4000**.
 ## Definition of done
 
 No change is finished until all of these are true. Don't ask whether to do them
-— they are the baseline, not an upsell.
+- they are the baseline, not an upsell.
 
 1. **Tests.** Add or update tests for the behavior you changed. `npm test` passes.
 2. **Docs.** Update `README.md` and this file if behavior, commands, env vars,
    file layout, or endpoints changed. A doc that describes a deleted script is a
-   bug — grep for the old name before you call it done.
+   bug - grep for the old name before you call it done.
 3. **Security.** Re-read the security posture below against your change. Any new
    route, input, or shell/network call gets validated at the boundary.
 4. **Verify for real.** Build it and drive it (`./polaris rebuild`, then the
    browser or curl). Tests passing is not the same as the app working.
-5. **Keep it lean.** No new dependency without a clear reason — see Conventions.
+5. **Keep it lean.** No new dependency without a clear reason - see Conventions.
 6. **Commit and push.** Every time, without being asked. Small, focused commits
    with a message that says why. Push to `origin`.
 
@@ -60,13 +60,13 @@ No change is finished until all of these are true. Don't ask whether to do them
 
 - **`.env` is loaded by `server/src/env.ts`, imported FIRST in `index.ts`.**
   Modules read `process.env` at evaluation time, so that import must stay first.
-  Before this existed, `.env` was silently ignored — ntfy never fired for days.
+  Before this existed, `.env` was silently ignored - ntfy never fired for days.
 - **HTTP header values must be Latin-1.** `notify.ts` runs titles through
   `headerSafe()`; an emoji in a header throws and the notification dies
   silently. Device names come off the network, so it also strips CR/LF.
 - **Env values that reach a timer or SQLite are validated in `config.ts`.**
   `SCAN_INTERVAL_MS` needs BOTH a floor and a ceiling: `NaN` coerces to a 0ms
-  interval, and a value past 2^31-1 overflows the timer back down to 1ms — same
+  interval, and a value past 2^31-1 overflows the timer back down to 1ms - same
   runaway, opposite end. `EVENT_RETENTION` reaching SQLite as `NaN` throws
   inside `pruneEvents`, which runs at the TOP of every scan, so one bad line
   means no scan ever finishes and no alert ever fires.
@@ -84,10 +84,10 @@ No change is finished until all of these are true. Don't ask whether to do them
 - **macOS `arp -an` strips leading zeros per octet** (`44:7:b:e5:19:84`).
   `normalizeMac` has to pad them; the old "strip separators, require 12 hex
   chars" rejected ~a third of a real network, so those devices had no MAC, no
-  vendor, and no stable id — which is where most ghost rows came from.
+  vendor, and no stable id - which is where most ghost rows came from.
 - **Discovery is ARP-first, not ping-first.** A UDP poke to each address makes
   the kernel resolve its MAC; we then read `arp -an`. Don't reintroduce a
-  per-host ping sweep — it was 1022 subprocesses per scan on a /22 and found
+  per-host ping sweep - it was 1022 subprocesses per scan on a /22 and found
   *fewer* devices. `ping` now runs only for hosts with no OS guess yet.
 - **Scan time is dominated by naming, not discovery.** Devices that answer no
   naming protocol must not be re-queried every scan (`triedUnnamed`); their
@@ -99,13 +99,16 @@ No change is finished until all of these are true. Don't ask whether to do them
 
 ## Conventions
 
+- **No em dashes anywhere.** Not in code comments, docs, commit messages, UI
+  copy, or replies. Use a comma, a colon, parentheses, or a plain hyphen. This
+  applies to text written for this repo and to anything written about it.
 - **Prefer zero dependencies.** The mDNS, NetBIOS and .env parsers are all
   hand-rolled on purpose; node_modules size is a standing concern.
 - Server tests use the **built-in `node:test`** runner; web uses **Vitest +
   Testing Library**. Node's runner isolates each file in its own process, which
   is how DB tests each get a clean `POLARIS_DATA_DIR`.
 - Port-scan **risk rules live in `net/portscan.ts` (`riskFor`)** and are
-  deliberately conservative — normal consumer ports (Chromecast 8008/8009/8443,
+  deliberately conservative - normal consumer ports (Chromecast 8008/8009/8443,
   IPP, Kasa 9999) must stay unflagged so a badge means something. There are
   tests asserting those stay clean.
 - Verify UI changes by actually driving the app in a browser, not just tests.
@@ -113,10 +116,10 @@ No change is finished until all of these are true. Don't ask whether to do them
 ## Security posture
 
 Binds to loopback only, rejects non-loopback `Host` headers (DNS-rebinding
-defense), and ships **no CORS** — the dashboard is same-origin. Port scans are
+defense), and ships **no CORS** - the dashboard is same-origin. Port scans are
 opt-in, per-device, and refuse to scan outside the local subnet.
 
-Two traps that were live bugs, both in `security.ts` — read it before touching
+Two traps that were live bugs, both in `security.ts` - read it before touching
 the middleware in `index.ts`:
 
 - **Match loopback as an ADDRESS, never a string prefix.** `startsWith("127.")`
@@ -129,5 +132,5 @@ the middleware in `index.ts`:
   Mutating verbs go through `isSameOriginRequest` (Origin + `Sec-Fetch-Site`).
 
 Anything reachable from the network is untrusted input: validate at the
-boundary, and keep hostile-input parsing O(bytes received) — the mDNS/NetBIOS
+boundary, and keep hostile-input parsing O(bytes received) - the mDNS/NetBIOS
 parsers share the single thread that serves the API.

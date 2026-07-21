@@ -13,7 +13,7 @@ interface Props {
 export function DeviceCard({ device: d, isNew, onRename, onTrust }: Props) {
   const [editing, setEditing] = useState(false);
   // Seeded once by useState, so a label changed server-side (or in another tab)
-  // left this holding the old text — and blurring wrote it back, silently
+  // left this holding the old text - and blurring wrote it back, silently
   // reverting the rename. Re-seed whenever we're not actively editing.
   const [draft, setDraft] = useState(d.label ?? "");
   useEffect(() => {
@@ -161,7 +161,7 @@ export function DeviceCard({ device: d, isNew, onRename, onTrust }: Props) {
                     key={`${p.port}/${p.proto}`}
                     title={
                       p.guessed
-                        ? `Unconfirmed — "${p.service}" is only the name registered for port ${p.port}`
+                        ? `Unconfirmed - "${p.service}" is only the name registered for port ${p.port}`
                         : (p.product ?? p.service ?? "")
                     }
                     className={`rounded px-1.5 py-0.5 font-mono text-[10px] ${

@@ -73,7 +73,7 @@ test("the forget confirmation disarms itself", async () => {
   try {
     render(<DeviceDetailPanel device={makeDevice({ id: "x" })} onClose={() => {}} onScanned={() => {}} />);
     fireEvent.click(screen.getByText("Forget this device"));
-    expect(screen.getByText(/Confirm — forget/)).toBeInTheDocument();
+    expect(screen.getByText(/Confirm - forget/)).toBeInTheDocument();
     act(() => vi.advanceTimersByTime(5000));
     expect(screen.getByText("Forget this device")).toBeInTheDocument();
   } finally {

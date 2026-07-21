@@ -2,7 +2,7 @@
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "::1"]);
 
 /**
- * The whole 127.0.0.0/8 range, matched as an ADDRESS — never as a string prefix.
+ * The whole 127.0.0.0/8 range, matched as an ADDRESS - never as a string prefix.
  *
  * `host.startsWith("127.")` looks equivalent and is not: it also accepts the
  * *hostname* `127.0.0.1.evil.com`, which an attacker can point at loopback,
@@ -28,7 +28,7 @@ export function hostnameOf(hostHeader: string): string {
  * request whose Host header isn't loopback. This is the key defense against
  * DNS-rebinding: a malicious page can point its own domain at 127.0.0.1 and
  * fetch this API from your browser, but the Host header still carries the
- * attacker's domain — which this check refuses. `extra` allows opt-in hosts
+ * attacker's domain - which this check refuses. `extra` allows opt-in hosts
  * (via ALLOWED_HOSTS) for anyone who deliberately runs Polaris off-loopback.
  */
 export function isLoopbackHost(hostHeader: string, extra: string[] = []): boolean {
@@ -41,8 +41,8 @@ export function isLoopbackHost(hostHeader: string, extra: string[] = []): boolea
  *
  * Shipping no CORS stops a cross-origin page from *reading* our responses; it
  * does nothing to stop a **simple** POST from being *sent*. A plain auto-
- * submitting form on any site you visit could hit /api/quit — which shells out
- * to `launchctl bootout` — and silently kill your network monitor until the
+ * submitting form on any site you visit could hit /api/quit - which shells out
+ * to `launchctl bootout` - and silently kill your network monitor until the
  * next login. So mutating routes additionally require that the request either
  * declares no origin at all (curl, same-origin form) or declares a loopback one.
  *

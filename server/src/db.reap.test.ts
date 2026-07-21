@@ -58,7 +58,7 @@ test("sweeps a pre-existing ghost duplicate stranded on an old subnet", () => {
   const mac = "bc:df:58:51:fb:f8";
   db.applyScan([seen({ id: mac, mac, ip: oldIp, hostname: "Living Room TV" })], 4000);
 
-  // Seed a legacy ghost row directly — the kind older builds left behind, which
+  // Seed a legacy ghost row directly - the kind older builds left behind, which
   // is never "seen" again once the network moved to a different subnet.
   db.db
     .prepare(
@@ -88,7 +88,7 @@ test("a device that drops out of the ARP cache does NOT flap offline", () => {
   // macOS expires ARP entries in ~20 minutes, so a device sitting right there
   // routinely reappears as `ip:<addr>` with no MAC. The sweep deleted that
   // ghost but the surviving MAC row was never in seenIds, so it was marked
-  // offline — with a bogus event and a frozen last_seen — then flipped back on
+  // offline - with a bogus event and a frozen last_seen - then flipped back on
   // the next scan. That's the source of the near-equal online/offline event
   // counts in the feed.
   const ip = "192.168.4.31";
@@ -96,11 +96,11 @@ test("a device that drops out of the ARP cache does NOT flap offline", () => {
   db.applyScan([seen({ id: mac, mac, ip, hostname: "Thermostat" })], 10_000);
   assert.equal(db.getDeviceById(mac)?.online, 1);
 
-  // Same device, same IP — but the ARP entry expired, so it arrives ip-keyed.
+  // Same device, same IP - but the ARP entry expired, so it arrives ip-keyed.
   const diff = db.applyScan([seen({ id: `ip:${ip}`, ip, hostname: "Thermostat" })], 11_000);
 
   const row = db.getDeviceById(mac);
-  assert.equal(row?.online, 1, "still online — it was literally just seen");
+  assert.equal(row?.online, 1, "still online - it was literally just seen");
   assert.equal(row?.last_seen, 11_000, "last_seen advances to this scan");
   assert.deepEqual(diff.wentOffline, [], "no spurious offline transition");
   assert.deepEqual(diff.newDevices, [], "the swept ghost is not reported as new");
@@ -127,7 +127,7 @@ test("sweeping a ghost takes its events with it", () => {
 });
 
 test("a device genuinely absent still goes offline", () => {
-  // The flapping fix must not make devices immortal — it only delays the call
+  // The flapping fix must not make devices immortal - it only delays the call
   // by one scan (see MISSES_BEFORE_OFFLINE).
   const mac = "aa:bb:cc:77:88:99";
   db.applyScan([seen({ id: mac, mac, ip: "192.168.4.33" })], 30_000);

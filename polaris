@@ -1,5 +1,5 @@
 #!/bin/bash
-# polaris — the switch. Run it from the repo root:
+# polaris - the switch. Run it from the repo root:
 #
 #   ./polaris          # is it running?
 #   ./polaris start
@@ -43,7 +43,7 @@ wait_ready() {
     sleep 1; echo -n "."
     if serving; then echo " ready → $URL"; return 0; fi
   done
-  echo " (no answer yet — check: ./polaris logs)"
+  echo " (no answer yet - check: ./polaris logs)"
 }
 
 case "${1:-status}" in
@@ -83,7 +83,7 @@ case "${1:-status}" in
 
   install)
     # Writes the LaunchAgent so Polaris starts at login and restarts if it
-    # crashes. Paths are derived from this repo and $HOME — nothing hardcoded.
+    # crashes. Paths are derived from this repo and $HOME - nothing hardcoded.
     mkdir -p "$HOME/Library/LaunchAgents" "$HOME/Library/Logs"
     cat > "$PLIST" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
@@ -118,7 +118,7 @@ EOF
     wait_unloaded || { echo "Previous instance won't unload; try again."; exit 1; }
     launchctl bootstrap "gui/$(id -u)" "$PLIST" || exit 1
     launchctl kickstart -k "$TARGET" >/dev/null 2>&1
-    wait_ready "Installing —"
+    wait_ready "Installing -"
     echo "  Auto-starts at login. Logs: $LOG"
     echo "  Remove it with: ./polaris uninstall"
     ;;

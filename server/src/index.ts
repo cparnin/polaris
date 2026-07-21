@@ -1,4 +1,4 @@
-import "./env.js"; // MUST be first — loads .env before any module reads process.env
+import "./env.js"; // MUST be first - loads .env before any module reads process.env
 import express from "express";
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
@@ -36,14 +36,14 @@ const PORT = Number(process.env.PORT ?? 4000);
 // Bind to loopback by default: the API exposes your full device inventory, so
 // it must NOT be reachable from the LAN. Override HOST only if you know why.
 const HOST = process.env.HOST ?? "127.0.0.1";
-// Guard the interval at both ends — see resolveInterval in ./config.ts.
+// Guard the interval at both ends - see resolveInterval in ./config.ts.
 const SCAN_INTERVAL_MS = applyResolved(resolveInterval(process.env.SCAN_INTERVAL_MS));
 
 const app = express();
 
 // Defense-in-depth for a loopback service that exposes your whole network map.
 // The dashboard talks to us same-origin (Vite dev proxy / served build), so we
-// need no CORS at all — and we reject any request whose Host header isn't a
+// need no CORS at all - and we reject any request whose Host header isn't a
 // loopback name to block DNS-rebinding attacks. See ./security.ts.
 const EXTRA_HOSTS = (process.env.ALLOWED_HOSTS ?? "")
   .split(",")
@@ -60,7 +60,7 @@ app.use((req, res, next) => {
 
 // The Host check above is not a CSRF defense and doesn't claim to be. Shipping
 // no CORS stops other origins from READING our responses, but a plain
-// auto-submitting form still SENDS a simple POST — and /api/quit shells out to
+// auto-submitting form still SENDS a simple POST - and /api/quit shells out to
 // `launchctl bootout`, so any page you visit could kill the monitor until your
 // next login. Mutating verbs additionally require a same-origin (or absent)
 // Origin. GET/HEAD are exempt: they're already covered by Host + no-CORS.
@@ -90,7 +90,7 @@ app.use(express.json());
 /** Device labels are user-set and rendered everywhere; keep them line-sized. */
 const MAX_LABEL_LEN = 120;
 
-// Label for the upstream tier on the map — set ISP_NAME=Frontier to name yours.
+// Label for the upstream tier on the map - set ISP_NAME=Frontier to name yours.
 const ISP_NAME = process.env.ISP_NAME?.trim() || "Internet / ISP";
 
 app.get("/api/health", (_req, res) => {
@@ -141,7 +141,7 @@ app.post("/api/quit", (_req, res) => {
 });
 
 // Mute new-device pushes while you have people over. Devices are still
-// discovered, recorded and shown — only the phone notification is suppressed.
+// discovered, recorded and shown - only the phone notification is suppressed.
 app.post("/api/guest-mode", (req, res) => {
   // Strictly a number: `null` and `""` both coerce to 0, which would silently
   // mean "turn it off" for a caller that meant something else entirely.
@@ -313,7 +313,7 @@ const server = app.listen(PORT, HOST, () => {
 
 // An unhandled rejection is FATAL by default in Node 24. This process runs
 // under launchd with KeepAlive, so a crash is silently respawned and looks like
-// nothing happened — the worst way to lose a background monitor. Log and carry
+// nothing happened - the worst way to lose a background monitor. Log and carry
 // on: a failed scan is not a reason to take down the daemon.
 process.on("unhandledRejection", (reason) => {
   console.error("[fatal] unhandled rejection:", reason);
@@ -329,7 +329,7 @@ for (const sig of ["SIGTERM", "SIGINT"] as const) {
   process.on(sig, () => {
     if (shuttingDown) return;
     shuttingDown = true;
-    console.log(`\n[shutdown] ${sig} — stopping Polaris`);
+    console.log(`\n[shutdown] ${sig} - stopping Polaris`);
     stopAutoScan();
     server.close(() => {
       closeDb();

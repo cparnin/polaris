@@ -36,7 +36,7 @@ test("lookupVendor returns null for an unknown, non-randomized MAC", () => {
 test("normalizeMac handles macOS arp output with leading zeros stripped", () => {
   // `arp -an` prints 44:7:b:e5:19:84, not 44:07:0b:e5:19:84. Stripping
   // separators and requiring 12 hex chars rejected these outright, so any
-  // device with a low-valued octet lost its MAC — and with it its identity.
+  // device with a low-valued octet lost its MAC - and with it its identity.
   assert.equal(normalizeMac("44:7:b:e5:19:84"), "44070BE51984");
   assert.equal(normalizeMac("c:83:cc:18:57:fa"), "0C83CC1857FA");
   assert.equal(normalizeMac("5c:62:8b:a3:ac:0"), "5C628BA3AC00");

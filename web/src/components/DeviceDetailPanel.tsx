@@ -6,7 +6,7 @@ import { deviceIcon, relTime } from "../deviceMeta.js";
 /**
  * Slide-in inspector for a single device: identity plus an on-demand nmap
  * service scan (open ports, detected services, and risky-exposure flags). This
- * is what turns the map into a security tool — click a node, see what it's
+ * is what turns the map into a security tool - click a node, see what it's
  * actually exposing on the LAN.
  */
 export function DeviceDetailPanel({
@@ -36,7 +36,7 @@ export function DeviceDetailPanel({
     return () => clearTimeout(t);
   }, [confirmForget]);
 
-  // Escape closes the slide-over — it's the reflex, and its absence is felt
+  // Escape closes the slide-over - it's the reflex, and its absence is felt
   // immediately when the only other way out is hitting the small ✕.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -118,8 +118,8 @@ export function DeviceDetailPanel({
         <dl className="grid grid-cols-2 gap-x-4 gap-y-3 px-5 py-4 text-sm">
           <Fact label="Status" value={d.online ? "Online" : "Offline"} accent={d.online ? "text-emerald-400" : "text-zinc-500"} />
           <Fact label="Trust" value={d.trusted ? "Trusted" : "Untrusted"} accent={d.trusted ? "text-emerald-400" : "text-amber-400"} />
-          <Fact label="Vendor" value={d.vendor ?? "—"} />
-          <Fact label="OS hint" value={d.os_guess ?? "—"} />
+          <Fact label="Vendor" value={d.vendor ?? "-"} />
+          <Fact label="OS hint" value={d.os_guess ?? "-"} />
           {d.randomized === 1 && <Fact label="MAC" value="Randomized (privacy)" accent="text-sky-400" />}
         </dl>
 
@@ -131,7 +131,7 @@ export function DeviceDetailPanel({
             <h3 className="mb-1.5 text-sm font-semibold text-white">Don't recognize this?</h3>
             <p className="text-xs leading-relaxed text-zinc-400">
               It answers no naming protocol, so Polaris can only see its hardware vendor.
-              Look this MAC up in your router's device list — the router sees the name the
+              Look this MAC up in your router's device list - the router sees the name the
               device gave out when it joined, which Polaris never gets to see.
             </p>
             <p className="mt-2 select-all rounded-md bg-black/40 px-2 py-1 font-mono text-xs text-zinc-200">
@@ -157,7 +157,7 @@ export function DeviceDetailPanel({
           </div>
 
           {scanning && (
-            <p className="text-xs text-zinc-500">Running nmap service scan — this can take 10–40s…</p>
+            <p className="text-xs text-zinc-500">Running nmap service scan - this can take 10–40s…</p>
           )}
 
           {!scanning && !hasScan && (
@@ -188,7 +188,7 @@ export function DeviceDetailPanel({
                     {p.guessed ? (
                       <span
                         className="text-zinc-400 italic"
-                        title={`Not identified. "${p.service}" is just the name historically registered for port ${p.port} — nmap couldn't confirm what's actually running.`}
+                        title={`Not identified. "${p.service}" is just the name historically registered for port ${p.port} - nmap couldn't confirm what's actually running.`}
                       >
                         {p.service} <span className="not-italic text-zinc-500">(unconfirmed)</span>
                       </span>
@@ -217,7 +217,7 @@ export function DeviceDetailPanel({
           )}
         </section>
 
-        {/* forget — for clearing dead records (e.g. devices from an old subnet) */}
+        {/* forget - for clearing dead records (e.g. devices from an old subnet) */}
         <section className="mt-auto border-t border-white/10 px-5 py-4">
           <button
             onClick={confirmForget ? forget : () => setConfirmForget(true)}
@@ -229,7 +229,7 @@ export function DeviceDetailPanel({
                 : "bg-white/5 text-zinc-400 hover:bg-red-500/20 hover:text-red-300"
             }`}
           >
-            {confirmForget ? "Confirm — forget this device?" : "Forget this device"}
+            {confirmForget ? "Confirm - forget this device?" : "Forget this device"}
           </button>
           <p className="mt-2 text-[11px] text-zinc-500">
             Removes it and its history. If it's still on your network it reappears on the

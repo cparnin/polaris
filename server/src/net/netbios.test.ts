@@ -24,7 +24,7 @@ test("parseNodeStatus extracts the unique <00> workstation name", () => {
   const buf = buildResponse([
     { name: "WORKGROUP", suffix: 0x00, group: true }, // skipped (group)
     { name: "POLARIS-PC", suffix: 0x00 }, // the machine name we want
-    { name: "POLARIS-PC", suffix: 0x20 }, // server service — not <00>
+    { name: "POLARIS-PC", suffix: 0x20 }, // server service - not <00>
   ]);
   assert.equal(parseNodeStatus(buf), "POLARIS-PC");
 });

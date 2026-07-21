@@ -2,7 +2,7 @@
   "name": "polaris",
   "version": "0.1.0",
   "private": true,
-  "description": "Polaris — god-mode visibility over your home network: device discovery, live status, mDNS names, and ntfy alerts.",
+  "description": "Polaris - god-mode visibility over your home network: device discovery, live status, mDNS names, and ntfy alerts.",
   "license": "MIT",
   "workspaces": ["server", "web"],
   "scripts": {

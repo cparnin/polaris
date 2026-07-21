@@ -49,7 +49,7 @@ function header(qd: number, an: number): Buffer {
 
 test("parsePtrAnswer survives hostile packets without spinning", () => {
   // These sockets are bound on all interfaces, and this parser shares the one
-  // thread that serves the API and runs scans — so an unbounded loop here is a
+  // thread that serves the API and runs scans - so an unbounded loop here is a
   // remote CPU-denial bug. A 12-byte packet claiming qdcount=65535 used to burn
   // ~110ms; ~9/sec pinned the process. Each case must be null/short-circuit and
   // fast, and none may throw.
@@ -59,7 +59,7 @@ test("parsePtrAnswer survives hostile packets without spinning", () => {
     ["both counts lie", header(65535, 65535)],
     ["truncated RR header", Buffer.concat([header(0, 1), Buffer.from([0x00])])],
     ["rr header cut mid-field", Buffer.concat([header(0, 1), Buffer.from([0x00, 0x00, 0x0c, 0x00])])],
-    // 0xc0 0x0c is a compression pointer back to offset 12 — itself.
+    // 0xc0 0x0c is a compression pointer back to offset 12 - itself.
     ["self-referential compression pointer", Buffer.concat([header(0, 1), Buffer.from([0xc0, 0x0c])])],
     ["pointer past the end of the buffer", Buffer.concat([header(0, 1), Buffer.from([0xc0, 0xff])])],
     ["label length runs past the end", Buffer.concat([header(0, 1), Buffer.from([0x40, 0x41])])],
@@ -74,7 +74,7 @@ test("parsePtrAnswer survives hostile packets without spinning", () => {
       result = parsePtrAnswer(buf);
     }, `${label} must not throw`);
     const ms = Number(process.hrtime.bigint() - started) / 1e6;
-    assert.ok(ms < 20, `${label} took ${ms.toFixed(1)}ms — parser is spinning`);
+    assert.ok(ms < 20, `${label} took ${ms.toFixed(1)}ms - parser is spinning`);
     assert.ok(result === null || typeof result === "string", `${label} returned junk`);
   }
 });

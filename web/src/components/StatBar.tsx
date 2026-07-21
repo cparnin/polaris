@@ -14,10 +14,10 @@ export function StatBar({ devices, loading }: { devices: Device[]; loading?: boo
   const untrusted = devices.filter((d) => d.trusted === 0 && d.online === 1).length;
   const randomized = devices.filter((d) => d.randomized === 1).length;
 
-  // Before the first scan lands there is no "0 devices online" — there is no
+  // Before the first scan lands there is no "0 devices online" - there is no
   // answer yet. These are the largest numbers on the page; showing a confident
   // zero reads as "your network is empty", which is a lie with good posture.
-  const show = (n: number): string | number => (loading ? "—" : n);
+  const show = (n: number): string | number => (loading ? "-" : n);
 
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

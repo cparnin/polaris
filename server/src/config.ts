@@ -4,7 +4,7 @@
  * These live here rather than inline at each use site so they can be tested
  * without booting the server. Every one of them has a real failure story:
  * a bad SCAN_INTERVAL_MS once meant back-to-back scanning forever, and a bad
- * EVENT_RETENTION makes pruneEvents() throw on every scan — which aborts the
+ * EVENT_RETENTION makes pruneEvents() throw on every scan - which aborts the
  * scan before notifications run, so the dashboard just quietly goes stale.
  */
 
@@ -13,7 +13,7 @@ const MAX_TIMER_MS = 2_147_483_647;
 
 export interface ResolvedValue<T> {
   value: T;
-  /** Set when the raw input was rejected — callers log this. */
+  /** Set when the raw input was rejected - callers log this. */
   warning?: string;
 }
 
@@ -21,7 +21,7 @@ export interface ResolvedValue<T> {
  * Scan cadence, clamped to a sane range.
  *
  * Needs a ceiling as well as a floor: an extra-zeros typo (3000000000)
- * overflows the timer and lands back at a 1ms interval — the exact runaway the
+ * overflows the timer and lands back at a 1ms interval - the exact runaway the
  * floor exists to prevent, entered from the other end.
  */
 export function resolveInterval(raw: string | undefined, fallback = 300_000): ResolvedValue<number> {
@@ -39,8 +39,8 @@ export function resolveInterval(raw: string | undefined, fallback = 300_000): Re
 /**
  * A positive whole number from the environment, or the fallback.
  *
- * Guards against the whole family of near-miss values — "5000  # keep 5k"
- * (pre-fix .env parsing), "", "abc", "-1", "1e999", 3.7 — any of which would
+ * Guards against the whole family of near-miss values - "5000  # keep 5k"
+ * (pre-fix .env parsing), "", "abc", "-1", "1e999", 3.7 - any of which would
  * otherwise reach SQLite as NaN/float and throw "datatype mismatch" at bind time.
  */
 export function resolveCount(

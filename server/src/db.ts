@@ -21,7 +21,7 @@ if (!existsSync(DB_PATH)) {
       try {
         renameSync(legacy + suffix, DB_PATH + suffix);
       } catch {
-        /* WAL/SHM may be absent — the main file is what matters */
+        /* WAL/SHM may be absent - the main file is what matters */
       }
     }
   }
@@ -73,7 +73,7 @@ addColumnIfMissing("devices", "open_ports", "TEXT"); // JSON array of OpenPort
 addColumnIfMissing("devices", "risk_count", "INTEGER");
 addColumnIfMissing("devices", "last_portscan_at", "INTEGER");
 // Consecutive scans a device has been missing. A device isn't declared offline
-// on the first miss — see MISSES_BEFORE_OFFLINE in applyScan.
+// on the first miss - see MISSES_BEFORE_OFFLINE in applyScan.
 addColumnIfMissing("devices", "missed_scans", "INTEGER NOT NULL DEFAULT 0");
 
 export interface DeviceRow {
@@ -120,7 +120,7 @@ const recentEventsStmt = db.prepare<[number], EventRow>(
  * the rest. Override with EVENT_RETENTION.
  */
 // Validated: a malformed value (e.g. `EVENT_RETENTION=5000  # keep 5k`) reaches
-// SQLite as NaN and throws, and pruneEvents() runs at the top of every scan —
+// SQLite as NaN and throws, and pruneEvents() runs at the top of every scan -
 // so one bad line means no scan ever completes and no alert ever fires.
 const MAX_EVENTS = applyResolved(resolveCount("EVENT_RETENTION", process.env.EVENT_RETENTION, 5000));
 const pruneEventsStmt = db.prepare(
@@ -141,7 +141,7 @@ export function closeDb(): void {
     db.pragma("wal_checkpoint(TRUNCATE)"); // fold the WAL back into the file
     db.close();
   } catch {
-    // already closed, or closed under us — nothing useful to do while exiting
+    // already closed, or closed under us - nothing useful to do while exiting
   }
 }
 
@@ -202,7 +202,7 @@ const savePortScanStmt = db.prepare(
 
 const deleteEventsForDeviceStmt = db.prepare("DELETE FROM events WHERE device_id = ?");
 
-// Prepared once at module scope like every other statement here — these two ran
+// Prepared once at module scope like every other statement here - these two ran
 // inside applyScan, so SQLite recompiled them on every scan.
 const listOnlineStmt = db.prepare<[], DeviceRow>("SELECT * FROM devices WHERE online = 1");
 const markOfflineStmt = db.prepare(
@@ -227,7 +227,7 @@ const MISSES_BEFORE_OFFLINE = 2;
 
 /**
  * Permanently forget a device and its activity history. Useful for clearing
- * dead records — e.g. devices left over from a previous subnet that will never
+ * dead records - e.g. devices left over from a previous subnet that will never
  * be seen again. If the device is still on the network it'll simply reappear
  * on the next scan (as a new device).
  */
@@ -328,7 +328,7 @@ export const applyScan = db.transaction((seen: SeenDevice[], now: number): ScanD
     // The sighting belongs to the surviving row. macOS expires ARP entries in
     // ~20 minutes, so a device that's sitting right there arrives as `ip:<addr>`
     // with no MAC; without this the MAC row isn't in seenIds, gets marked
-    // offline with a bogus event, and flips back next scan — endless flapping.
+    // offline with a bogus event, and flips back next scan - endless flapping.
     if (!seenIds.has(dupe.real_id)) {
       seenIds.add(dupe.real_id);
       touchDeviceStmt.run(now, dupe.real_id);
@@ -344,7 +344,7 @@ export const applyScan = db.transaction((seen: SeenDevice[], now: number): ScanD
   // One missed scan means very little: a phone dozing, a Wi-Fi hiccup, the
   // first scan after the laptop wakes and the radio hasn't reassociated. Acting
   // on it produced an offline event and an online event a few minutes later,
-  // forever — which is most of what was filling the activity feed. Requiring a
+  // forever - which is most of what was filling the activity feed. Requiring a
   // repeat costs one scan interval of latency on a genuine departure and
   // removes nearly all the noise.
   const online = listOnlineStmt.all();

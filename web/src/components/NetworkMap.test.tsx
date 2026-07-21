@@ -115,13 +115,13 @@ test("collapsing a zone hides its devices", () => {
   expect(screen.getByText("Sketchy-IoT")).toBeInTheDocument();
   fireEvent.click(screen.getByLabelText("Collapse Untrusted"));
   expect(screen.queryByText("Sketchy-IoT")).not.toBeInTheDocument();
-  // zone header remains — the toggle now offers to expand it again
+  // zone header remains - the toggle now offers to expand it again
   expect(screen.getByLabelText("Expand Untrusted")).toBeInTheDocument();
 });
 
 test("device nodes are reachable and activatable by keyboard", () => {
   // role="img" on the <svg> made this entire subtree presentational to assistive
-  // tech, and the nodes were clickable <g> elements with no tabIndex — so the
+  // tech, and the nodes were clickable <g> elements with no tabIndex - so the
   // map had zero keyboard access and the only route to a port scan was a mouse.
   const onInspect = vi.fn();
   render(

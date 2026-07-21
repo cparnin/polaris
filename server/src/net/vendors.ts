@@ -8,7 +8,7 @@ import { OUI as CURATED } from "./vendors-data.js";
  *
  * It used to be `import ouiDb from "./oui-db.json"`, which parsed 39,946
  * entries into a JS object at startup and kept them forever: 14MB of RSS,
- * measured, on a process whose whole job is to sit in the background — to
+ * measured, on a process whose whole job is to sit in the background - to
  * serve about 20 lookups per scan. As a flat "OUI\tvendor\n" string it's
  * ~1.2MB, loaded on first use, and a lookup is a dozen string comparisons.
  */
@@ -55,7 +55,7 @@ function lookupOui(prefix: string): string | null {
  *
  * Handles octets with their leading zero stripped, because that's what macOS
  * `arp -an` actually prints: `44:7:b:e5:19:84`, `c:83:cc:18:57:fa`. Stripping
- * separators and demanding exactly 12 hex chars rejects those — which silently
+ * separators and demanding exactly 12 hex chars rejects those - which silently
  * threw away the MAC for any device with a low-valued octet (roughly a third of
  * a real network). Those devices then had no stable identity and were stored as
  * `ip:<addr>` rows, which is where most "ghost duplicates" came from.
@@ -83,7 +83,7 @@ export function formatMac(mac12: string): string {
 /**
  * Locally-administered / randomized MACs have bit 1 of the first octet set.
  * These are privacy MACs (common on modern phones) and won't resolve to a
- * real vendor — worth surfacing in the UI.
+ * real vendor - worth surfacing in the UI.
  */
 export function isRandomizedMac(mac12: string): boolean {
   const firstOctet = parseInt(mac12.slice(0, 2), 16);

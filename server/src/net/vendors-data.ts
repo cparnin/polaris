@@ -21,7 +21,7 @@ export const OUI: Record<string, string> = {
   // Raspberry Pi
   "B827EB": "Raspberry Pi", "DCA632": "Raspberry Pi", "E45F01": "Raspberry Pi",
   "2CCF67": "Raspberry Pi", "D83ADD": "Raspberry Pi",
-  // Espressif (ESP8266/ESP32 — lots of smart-home DIY)
+  // Espressif (ESP8266/ESP32 - lots of smart-home DIY)
   "5CCF7F": "Espressif", "A020A6": "Espressif", "240AC4": "Espressif",
   "3C7161": "Espressif", "84F3EB": "Espressif", "7CDFA1": "Espressif",
   // TP-Link

@@ -4,7 +4,7 @@ import dgram from "node:dgram";
  * NetBIOS node-status name resolver (UDP 137).
  *
  * Windows PCs, NAS boxes, and anything running Samba answer a NetBIOS
- * node-status query with their machine name — even when they stay silent on
+ * node-status query with their machine name - even when they stay silent on
  * mDNS and have no reverse DNS. This is often the *only* way to put a real
  * name on an otherwise-generic "Vendor · .x" device. We hand-roll the packet
  * (same approach as our mDNS resolver) to avoid a native dependency.
@@ -105,7 +105,7 @@ export async function netbiosBatch(
         const name = parseNodeStatus(msg);
         if (name) result.set(rinfo.address, name);
       } catch {
-        /* malformed packet — ignore */
+        /* malformed packet - ignore */
       }
     });
     sock.on("error", finish);
@@ -116,7 +116,7 @@ export async function netbiosBatch(
         try {
           sock.send(query, NB_PORT, ip);
         } catch {
-          /* unreachable host — skip */
+          /* unreachable host - skip */
         }
       }
     });

@@ -47,7 +47,7 @@ const GROUP_GAP = 40;
 
 /**
  * Grouping by what a device IS, as an alternative to whether you trust it.
- * Trust answers "should I worry"; kind answers "what am I looking at" — useful
+ * Trust answers "should I worry"; kind answers "what am I looking at" - useful
  * once a network has 20+ devices and the untrusted box is just a wall of bulbs.
  */
 const KIND_DEFS = [
@@ -57,7 +57,7 @@ const KIND_DEFS = [
   { key: "other", label: "Other", color: "#94a3b8" },
 ] as const;
 
-/** Bucket a device by vendor and OS hint — coarse on purpose. */
+/** Bucket a device by vendor and OS hint - coarse on purpose. */
 function kindKeyOf(d: Device): string {
   const v = (d.vendor ?? "").toLowerCase();
   const name = `${d.label ?? ""} ${d.hostname ?? ""}`.toLowerCase();
@@ -152,7 +152,7 @@ export function NetworkMap({
       .filter((g) => g.devices.length > 0);
 
     // Center the row of group boxes horizontally under the gateway. Grow the
-    // canvas if they don't fit — grouping by type makes four zones instead of
+    // canvas if they don't fit - grouping by type makes four zones instead of
     // two, which overflowed a fixed width and clipped the leftmost one.
     const totalW = built.reduce((s, g) => s + g.w, 0) + GROUP_GAP * Math.max(0, built.length - 1);
     const width = Math.max(W_MIN, totalW + GROUP_GAP * 2);
@@ -205,7 +205,7 @@ export function NetworkMap({
     const dx = (e.clientX - start.x) * k;
     const dy = (e.clientY - start.y) * k;
     if (Math.abs(dx) + Math.abs(dy) > 3) moved.current = true;
-    // Capture start values — the updater may run after pointerup nulls drag.current.
+    // Capture start values - the updater may run after pointerup nulls drag.current.
     setView((v) => ({ ...v, tx: start.tx + dx, ty: start.ty + dy }));
   }
   function onPointerUp() {
@@ -268,7 +268,7 @@ export function NetworkMap({
       {open &&
         (onlineCount === 0 ? (
           <div className="px-4 pb-6 pt-2 text-center text-sm text-zinc-500">
-            No devices online yet — the map fills in as the scan finds them.
+            No devices online yet - the map fills in as the scan finds them.
           </div>
         ) : (
           <div className="relative">
@@ -295,7 +295,7 @@ export function NetworkMap({
               onPointerLeave={onPointerUp}
             >
               <g transform={`translate(${view.tx} ${view.ty}) scale(${view.scale})`}>
-                {/* The gateway is the firewall/NAT boundary — everything above
+                {/* The gateway is the firewall/NAT boundary - everything above
                     this line is outside your control, everything below trusts
                     everything else. Drawn from local facts only: naming a
                     public IP here would mean calling a third-party service,
@@ -311,7 +311,7 @@ export function NetworkMap({
                   strokeDasharray="6 6"
                 />
                 <text x={48} y={BOUNDARY_Y - 7} fontSize={10} fill="#38bdf8" fillOpacity={0.75}>
-                  🛡 firewall / NAT — your LAN below
+                  🛡 firewall / NAT - your LAN below
                 </text>
 
                 {/* edges: internet → gateway → each zone */}
@@ -486,7 +486,7 @@ function DeviceNode({
       tabIndex={0}
       aria-label={`${name}${d.ip ? `, ${d.ip}` : ""}${d.online === 1 ? "" : ", offline"}${
         scan.status === "risky" ? `, ${scan.riskCount} risky ports` : ""
-      } — open details`}
+      } - open details`}
       onMouseEnter={() => setHover(d.id)}
       onMouseLeave={() => setHover(null)}
       onFocus={() => setHover(d.id)}

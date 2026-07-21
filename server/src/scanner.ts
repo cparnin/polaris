@@ -37,7 +37,7 @@ const AUTOSCAN_MAX = Math.max(0, Number(process.env.AUTOSCAN_MAX_PER_SCAN ?? 3) 
 /**
  * For each newly-seen device: port-scan it (up to AUTOSCAN_MAX per scan),
  * persist the result so the map badges it immediately, then push an alert that
- * says what the device is exposing. Best-effort — never throws into the caller.
+ * says what the device is exposing. Best-effort - never throws into the caller.
  */
 async function handleNewDevices(ids: string[]): Promise<void> {
   for (const [i, id] of ids.entries()) {
@@ -73,7 +73,7 @@ let paused = false;
  *
  * Per-device allowlisting can't solve this. Modern phones use randomized MACs
  * that rotate per network and per visit, so the friend whose phone you approved
- * last month arrives as a brand-new device today — there is no stable identity
+ * last month arrives as a brand-new device today - there is no stable identity
  * to remember. Muting for an evening is honest about that: nothing is
  * suppressed permanently, nothing is silently trusted, and the devices still
  * appear on the dashboard and in history.
@@ -105,7 +105,7 @@ export function setPaused(value: boolean): void {
 }
 
 // Every Nth scan, re-resolve *every* device's name from the network instead of
-// trusting the cache — so renamed devices and names that were unresolvable the
+// trusting the cache - so renamed devices and names that were unresolvable the
 // first time get picked up. Unknown hosts are always re-resolved regardless.
 const NAME_REFRESH_EVERY = Math.max(1, Number(process.env.NAME_REFRESH_EVERY ?? 6));
 
@@ -141,13 +141,13 @@ export async function runScan(): Promise<ScanSummary> {
   scanning = true;
   scanBus.emit("scan:start", { at: Date.now() });
   try {
-    // If the DB is empty this is the very first scan — treat everything as a
+    // If the DB is empty this is the very first scan - treat everything as a
     // baseline and don't fire a notification storm for pre-existing devices.
     const priorDevices = listDevices();
     const isBaseline = priorDevices.length === 0;
 
     // Feed already-resolved names back in so most scans skip the mDNS/NetBIOS/DNS
-    // lookups for hosts we've already identified — background scans stay cheap.
+    // lookups for hosts we've already identified - background scans stay cheap.
     // On a refresh scan we pass nothing, forcing a fresh resolve of everyone.
     const refreshNames = scanCount % NAME_REFRESH_EVERY === 0;
     scanCount++;
@@ -158,13 +158,13 @@ export async function runScan(): Promise<ScanSummary> {
       }
     }
     // A device's OS family doesn't change, so once we've guessed it we never
-    // need to ping that host again — which is the only reason we still ping.
+    // need to ping that host again - which is the only reason we still ping.
     const knownOs = new Map<string, string>();
     for (const d of priorDevices) {
       if (d.os_guess) knownOs.set(d.id, d.os_guess);
     }
     // Devices we've already failed to name. Empty on a refresh scan, so they do
-    // get retried periodically — just not every five minutes forever.
+    // get retried periodically - just not every five minutes forever.
     const triedUnnamed = new Set<string>();
     if (!refreshNames) {
       for (const d of priorDevices) {
@@ -207,7 +207,7 @@ export async function runScan(): Promise<ScanSummary> {
 /**
  * Log a failed scan, quietly when it's an expected condition.
  *
- * Being on a VPN isn't an error — it's a normal state where we can't see the
+ * Being on a VPN isn't an error - it's a normal state where we can't see the
  * LAN. Logging it as a failure every 5 minutes would train you to ignore the
  * log, which is where the real failures show up.
  */

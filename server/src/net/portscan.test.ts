@@ -48,7 +48,7 @@ test("does NOT flag ports that are normal on consumer gear", () => {
 
 test("an unidentified service is marked as a guess, not a detection", () => {
   // The eero case: nmap reports "ssl/nessus" on 3001 because that port was
-  // Nessus's in the 2000s — it has NOT found a vulnerability scanner running on
+  // Nessus's in the 2000s - it has NOT found a vulnerability scanner running on
   // your router. Presented as a detection, that's an alarming false claim.
   const out = [
     "PORT     STATE SERVICE     VERSION",

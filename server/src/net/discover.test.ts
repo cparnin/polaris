@@ -14,8 +14,8 @@ test("inSubnet works on networks whose first octet is >= 128", () => {
   // The bug this pins: `a & mask === b & mask >>> 0` only coerced the RIGHT
   // side unsigned (>>> binds tighter than ===), so `&`'s signed int32 result
   // never matched once the high bit was set. Every one of these returned false,
-  // which meant ARP-known hosts that don't answer ICMP — Windows boxes with the
-  // default firewall, ICMP-dropping IoT gear — were silently dropped from the
+  // which meant ARP-known hosts that don't answer ICMP - Windows boxes with the
+  // default firewall, ICMP-dropping IoT gear - were silently dropped from the
   // scan on the two most common home network layouts.
   assert.equal(inSubnet("192.168.1.55", net("192.168.1.10", 24)), true);
   assert.equal(inSubnet("172.16.3.55", net("172.16.3.10", 24)), true);
@@ -48,7 +48,7 @@ test("isNonHostMac filters broadcast and multicast pseudo-devices", () => {
   assert.equal(isNonHostMac("000000000000"), true, "null");
   assert.equal(isNonHostMac("01005e7ffffa"), true, "IPv4 multicast");
   assert.equal(isNonHostMac("333300000001"), true, "IPv6 multicast");
-  // Real MACs must survive — including the locally-administered (randomized)
+  // Real MACs must survive - including the locally-administered (randomized)
   // ones modern phones use, which set bit 1, not bit 0, of the first octet.
   assert.equal(isNonHostMac("48a2e6db7070"), false, "Resideo thermostat");
   assert.equal(isNonHostMac("a0764eb67194"), false, "Espressif");
@@ -60,7 +60,7 @@ test("isNetworkOrBroadcast excludes the reserved pair, not real hosts", () => {
   assert.equal(isNetworkOrBroadcast("192.168.4.0", net("192.168.4.1", 22)), true);
   assert.equal(isNetworkOrBroadcast("192.168.7.255", net("192.168.4.1", 22)), true);
   assert.equal(isNetworkOrBroadcast("192.168.4.44", net("192.168.4.1", 22)), false);
-  // .255 is an ordinary host inside a /22 — only the LAST address is broadcast.
+  // .255 is an ordinary host inside a /22 - only the LAST address is broadcast.
   assert.equal(isNetworkOrBroadcast("192.168.4.255", net("192.168.4.1", 22)), false);
   assert.equal(isNetworkOrBroadcast("192.168.1.255", net("192.168.1.1", 24)), true);
   assert.equal(isNetworkOrBroadcast("192.168.1.10", net("192.168.1.1", 32)), false, "/32 has no pair");
@@ -69,7 +69,7 @@ test("isNetworkOrBroadcast excludes the reserved pair, not real hosts", () => {
 test("lanUnusableReason rejects VPN tunnels and /32 default routes", () => {
   // A full-tunnel VPN takes the default route and reports a /32 on utun. The
   // sweep would find exactly one address, so every device on the real LAN would
-  // be marked offline — a whole-inventory false alarm every time you connect.
+  // be marked offline - a whole-inventory false alarm every time you connect.
   assert.ok(lanUnusableReason({ ...net("10.8.0.2", 32), iface: "utun4" }), "utun /32");
   assert.ok(lanUnusableReason({ ...net("10.8.0.2", 24), iface: "utun4" }), "utun even with a real mask");
   assert.ok(lanUnusableReason({ ...net("192.168.1.5", 32), iface: "en0" }), "/32 on a real iface");

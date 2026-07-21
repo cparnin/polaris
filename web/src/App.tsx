@@ -156,7 +156,7 @@ export default function App() {
   }, [confirmQuit]);
 
   // Expire the NEW badge. It only ever accumulated, so a device stayed ringed
-  // and populated the "New" filter until you happened to reload the page —
+  // and populated the "New" filter until you happened to reload the page -
   // which made the badge mean "new at some point" rather than "new".
   useEffect(() => {
     if (newSince.size === 0) return;
@@ -250,7 +250,7 @@ export default function App() {
       )}
 
       {/* Everything below this banner is last-known state, not live state. Say
-          so loudly — a confident stale network map is this tool's worst lie. */}
+          so loudly - a confident stale network map is this tool's worst lie. */}
       {!connected && (
         <div
           role="alert"
@@ -259,7 +259,7 @@ export default function App() {
           <span aria-hidden="true">⚠</span>
           <span>
             <span className="font-semibold">Disconnected from Polaris.</span> Showing the last known
-            state — it may be out of date. Retrying automatically; if it doesn't come back, run{" "}
+            state - it may be out of date. Retrying automatically; if it doesn't come back, run{" "}
             <code className="rounded bg-black/30 px-1 py-0.5 text-amber-100">./polaris status</code>.
           </span>
         </div>
@@ -289,7 +289,7 @@ export default function App() {
           {ntfy && (
             <button
               onClick={ntfy.configured ? testNotify : undefined}
-              title={ntfy.configured ? `ntfy → ${ntfy.host} (click to test)` : "ntfy not configured — set NTFY_URL"}
+              title={ntfy.configured ? `ntfy → ${ntfy.host} (click to test)` : "ntfy not configured - set NTFY_URL"}
               className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs transition-colors ${
                 ntfy.configured
                   ? "bg-sky-500/15 text-sky-300 hover:bg-sky-500/25"
@@ -338,7 +338,7 @@ export default function App() {
           </button>
           <button
             onClick={togglePause}
-            title={paused ? "Auto-scanning is paused — click to resume" : "Pause auto-scanning"}
+            title={paused ? "Auto-scanning is paused - click to resume" : "Pause auto-scanning"}
             className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm transition-colors ${
               paused
                 ? "bg-amber-500/20 text-amber-300 hover:bg-amber-500/30"
@@ -408,7 +408,7 @@ export default function App() {
           {filtered.length === 0 && (
             <div className="rounded-xl border border-dashed border-white/10 py-12 text-center text-sm text-zinc-500">
               {devices.length === 0
-                ? "First scan running — devices will appear here shortly."
+                ? "First scan running - devices will appear here shortly."
                 : "No devices match this filter."}
             </div>
           )}

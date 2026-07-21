@@ -13,7 +13,7 @@ const pexec = promisify(execFile);
 const MAX_SWEEP_HOSTS = 4096;
 /** Concurrent `ping` processes for the TTL pass over already-found hosts. */
 const TTL_CONCURRENCY = 32;
-/** Discard service (RFC 863) — closed almost everywhere, harmless if not. */
+/** Discard service (RFC 863) - closed almost everywhere, harmless if not. */
 const POKE_PORT = 9;
 /** Datagrams in flight per batch; more than this starts returning ENOBUFS. */
 const POKE_CHUNK = 128;
@@ -83,7 +83,7 @@ function osGuessFromTtl(ttl: number | null): string | null {
  * about the ARP table the kernel fills in as a side effect. One socket, one
  * datagram per host, zero subprocesses.
  *
- * Port 9 is the standard discard service — anything actually listening throws
+ * Port 9 is the standard discard service - anything actually listening throws
  * the bytes away, and the overwhelming majority of hosts simply have it closed,
  * which is equally fine. The payload is empty. This is quieter on the wire than
  * the ICMP sweep it replaced.
@@ -114,7 +114,7 @@ async function arpPoke(ips: string[]): Promise<void> {
       );
     }
   } catch {
-    /* couldn't bind — fall through; the ARP cache may still hold recent hosts */
+    /* couldn't bind - fall through; the ARP cache may still hold recent hosts */
   } finally {
     try {
       sock.close();
@@ -130,14 +130,14 @@ async function arpPoke(ips: string[]): Promise<void> {
  * Discover live hosts, ARP-first.
  *
  * This used to ping every address in the subnet: on a /22 that's 1022 `ping`
- * subprocesses every scan — ~294k process spawns a day to find ~20 devices,
+ * subprocesses every scan - ~294k process spawns a day to find ~20 devices,
  * 8 seconds of wall clock, and ~46MB of RSS churn per sweep that macOS was slow
  * to hand back. Poking with UDP and reading the ARP table instead is ~1.5s,
  * flat on memory, and finds MORE hosts: ARP resolves for devices that ignore
  * ICMP entirely, which is most of the interesting ones (Windows boxes behind
  * the default firewall, locked-down IoT gear).
  *
- * We still ping — but only the handful of addresses that actually resolved, and
+ * We still ping - but only the handful of addresses that actually resolved, and
  * only to read the reply TTL for the OS-family guess. ~20 subprocesses, not
  * 1022. A host that doesn't answer ICMP simply has no OS hint, which is exactly
  * what happened before too.
@@ -160,7 +160,7 @@ async function sweepSubnet(
   // TTL pass over just the live hosts, bounded so a big subnet full of devices
   // still can't spawn an unreasonable number of processes at once. Hosts we've
   // already classified are skipped entirely, so a steady-state scan spawns no
-  // ping processes at all — the OS family of a device doesn't change.
+  // ping processes at all - the OS family of a device doesn't change.
   const targets = [...live.keys()].filter(
     (ip) => !skipTtlFor?.(ip, arp.get(ip) ?? null),
   );
@@ -184,7 +184,7 @@ async function sweepSubnet(
  *
  * The ARP cache holds broadcast (ff:ff:ff:ff:ff:ff) and multicast entries
  * alongside real hosts. They have to be filtered or they surface as devices and
- * fire "new device" alerts — that's how ff:ff:ff:ff:ff:ff at the network
+ * fire "new device" alerts - that's how ff:ff:ff:ff:ff:ff at the network
  * address earned itself a push notification. Takes a normalized MAC.
  */
 export function isNonHostMac(mac: string): boolean {
@@ -210,7 +210,7 @@ async function readArpTable(): Promise<Map<string, string>> {
       if (mac && !isNonHostMac(mac)) map.set(ip, formatMac(mac));
     }
   } catch {
-    /* arp cache read failed — return what we have */
+    /* arp cache read failed - return what we have */
   }
   return map;
 }
@@ -220,7 +220,7 @@ async function reverseDns(ip: string): Promise<string | null> {
     // dns.reverse has no built-in timeout and can hang on hosts with no PTR;
     // cap it so a few slow lookups can't stretch out the whole scan.
     // The timeout handle must be cleared when the lookup wins, or every
-    // resolved host leaves a live 2s timer holding its closure — up to one per
+    // resolved host leaves a live 2s timer holding its closure - up to one per
     // host, per scan.
     let timer: NodeJS.Timeout | undefined;
     try {
@@ -256,7 +256,7 @@ export class NotOnLanError extends Error {
  * Is the default route something other than a real LAN?
  *
  * A full-tunnel VPN takes the default route and reports a /32 on a `utun`
- * interface. Scanning that finds exactly one address — so every device would be
+ * interface. Scanning that finds exactly one address - so every device would be
  * marked offline, writing an offline event for your whole inventory, then an
  * online event for all of them when the VPN drops. Refusing to scan is the
  * honest answer: we genuinely cannot see the LAN from here.
@@ -276,7 +276,7 @@ export function lanUnusableReason(net: NetInfo): string | null {
  *
  * `knownNames` maps device-id → previously-resolved hostname. Any host we've
  * already named is skipped during enrichment, so a steady-state scan does zero
- * mDNS/reverse-DNS work — only genuinely new or still-unnamed hosts pay that
+ * mDNS/reverse-DNS work - only genuinely new or still-unnamed hosts pay that
  * cost. This keeps repeated background scans cheap on CPU and network.
  */
 export interface ScanOptions {
@@ -288,7 +288,7 @@ export interface ScanOptions {
    * Device-ids we've already tried and failed to name. Retried only on a
    * periodic refresh, where the scanner passes an empty set.
    *
-   * Without this, every unnameable device (11 of 21 on a real network — IoT gear
+   * Without this, every unnameable device (11 of 21 on a real network - IoT gear
    * that answers no naming protocol at all) re-ran mDNS + NetBIOS + reverse DNS
    * on every single scan. Those have fixed multi-second timeouts, so they, not
    * the sweep, dominated scan time. A device that has no name now will still
@@ -349,7 +349,7 @@ export async function scanNetwork(opts: ScanOptions = {}): Promise<ScanResult> {
       const id = deviceIdFor(ip, mac);
       const cached = knownNames?.get(id);
       // reverseDns is the per-host fallback, but only for hosts we actually
-      // tried to enrich this round — otherwise it reintroduces a DNS lookup
+      // tried to enrich this round - otherwise it reintroduces a DNS lookup
       // per unnameable device on every scan, which is what we just removed.
       const hostname =
         cached ??
@@ -382,10 +382,10 @@ export function ipToInt(ip: string): number {
 /**
  * Is `ip` within the given interface's subnet?
  *
- * `&` yields a SIGNED int32, so both sides must be coerced unsigned — and the
+ * `&` yields a SIGNED int32, so both sides must be coerced unsigned - and the
  * coercion must be parenthesized, because `>>>` binds tighter than `===`.
  * Written as `a & mask === b & mask >>> 0`, only the right side is unsigned, so
- * any network whose first octet is >= 128 (192.168.x, 172.16.x — i.e. most home
+ * any network whose first octet is >= 128 (192.168.x, 172.16.x - i.e. most home
  * networks) never matches, and ARP-known hosts that don't answer ICMP silently
  * vanish from the scan. portscan.ts:assertInSubnet has the same computation.
  */
@@ -394,7 +394,7 @@ export function ipToInt(ip: string): number {
  *
  * Neither is a host. `hostsInSubnet` already skips them when sweeping, but the
  * ARP fold-in comes straight from the kernel's cache, which does hold entries
- * for them — that's how ff:ff:ff:ff:ff:ff at 192.168.4.0 became a "new device".
+ * for them - that's how ff:ff:ff:ff:ff:ff at 192.168.4.0 became a "new device".
  */
 export function isNetworkOrBroadcast(ip: string, net: NetInfo): boolean {
   if (net.netmaskBits >= 31) return false; // /31 and /32 have no reserved pair
