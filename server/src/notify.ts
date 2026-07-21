@@ -122,10 +122,23 @@ export function buildNewDeviceAlert(
     for (const risk of scan.risks) lines.push(`⚠️ ${risk}`);
   }
 
-  // Lead with the exposure count when there is one — that's the headline.
+  // An alert you can't act on is just anxiety. When we have no real name, the
+  // recipient is staring at "Intel Corporate · .59" with no way forward — so
+  // point at the one place that CAN name it. The router sees the DHCP hostname
+  // the device announced at join time; Polaris never gets to see that.
+  if (!dev.label && !dev.hostname && dev.mac) {
+    lines.push("");
+    lines.push("Don't recognize it? Look up this MAC in your router's");
+    lines.push("device list — it sees names Polaris can't.");
+  }
+
+  // "New device on your network" is a claim we cannot support: all we know is
+  // that it's new to OUR records. A device can be newly-visible rather than
+  // newly-arrived — a scanner improvement surfaced four devices that had been
+  // sitting there for months, and every one of them said "new on your network".
   const title = risky
     ? `New device (${risky} risky port${risky > 1 ? "s" : ""}): ${name}`
-    : `New device on your network: ${name}`;
+    : `New device seen: ${name}`;
 
   return {
     title,

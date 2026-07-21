@@ -123,6 +123,26 @@ export function DeviceDetailPanel({
           {d.randomized === 1 && <Fact label="MAC" value="Randomized (privacy)" accent="text-sky-400" />}
         </dl>
 
+        {/* An unnamed device is the whole reason someone opens this panel, and
+            "Intel Corporate · .59" is a dead end without a next step. Polaris
+            can't see DHCP hostnames; the router can. */}
+        {!d.label && !d.hostname && d.mac && (
+          <section className="border-t border-white/10 px-5 py-4">
+            <h3 className="mb-1.5 text-sm font-semibold text-white">Don't recognize this?</h3>
+            <p className="text-xs leading-relaxed text-zinc-400">
+              It answers no naming protocol, so Polaris can only see its hardware vendor.
+              Look this MAC up in your router's device list — the router sees the name the
+              device gave out when it joined, which Polaris never gets to see.
+            </p>
+            <p className="mt-2 select-all rounded-md bg-black/40 px-2 py-1 font-mono text-xs text-zinc-200">
+              {d.mac}
+            </p>
+            <p className="mt-2 text-[11px] text-zinc-500">
+              Once you know what it is, click its name above to label it.
+            </p>
+          </section>
+        )}
+
         {/* port scan */}
         <section className="border-t border-white/10 px-5 py-4">
           <div className="mb-3 flex items-center justify-between">

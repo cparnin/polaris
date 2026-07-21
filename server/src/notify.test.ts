@@ -40,7 +40,8 @@ test("drops control characters to prevent header injection", () => {
 
 test("new-device alert without a scan keeps the plain headline", () => {
   const a = buildNewDeviceAlert(device());
-  assert.match(a.title, /^New device on your network: guest-phone$/);
+  // Deliberately NOT "on your network" — see the claim-accuracy test below.
+  assert.match(a.title, /^New device seen: guest-phone$/);
   assert.equal(a.priority, "high");
   assert.match(a.message, /192\.168\.4\.61/);
 });
@@ -76,4 +77,33 @@ test("new-device alert leads with the exposure count and escalates priority", ()
 test("a clean scan says so explicitly", () => {
   const a = buildNewDeviceAlert(device(), scanResult({ ports: [], risks: [] }));
   assert.match(a.message, /No open ports found/);
+});
+
+test("an unnamed device's alert says how to identify it", () => {
+  // "New device on your network: Intel Corporate · .59" is a dead end — the
+  // recipient has no way to act on it. The router holds the DHCP hostname that
+  // Polaris can never see, so point there.
+  const msg = buildNewDeviceAlert(
+    device({ hostname: null, label: null, vendor: "Intel Corporate", ip: "192.168.4.59", mac: "d4:54:8b:c2:b1:22" }),
+    null
+  );
+  assert.match(msg.message, /router's/);
+  assert.match(msg.message, /d4:54:8b:c2:b1:22/);
+});
+
+test("a device we can already name doesn't get the identification hint", () => {
+  const named = buildNewDeviceAlert(device({ hostname: "Office-TV", mac: "aa:bb:cc:dd:ee:ff" }), null);
+  assert.doesNotMatch(named.message, /router's/, "no help needed when it has a real name");
+
+  const labelled = buildNewDeviceAlert(device({ hostname: null, label: "Chad's laptop", mac: "aa:bb:cc:dd:ee:ff" }), null);
+  assert.doesNotMatch(labelled.message, /router's/);
+});
+
+test("the alert does not claim a device is new to the NETWORK", () => {
+  // Polaris only knows a device is new to its own records. A discovery
+  // improvement once surfaced four devices that had been on the LAN for
+  // months, and each one announced itself as "New device on your network".
+  const msg = buildNewDeviceAlert(device({ hostname: "Thermostat" }), null);
+  assert.doesNotMatch(msg.title, /on your network/i);
+  assert.match(msg.title, /New device seen/);
 });
