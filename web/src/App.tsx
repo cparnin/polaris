@@ -5,6 +5,7 @@ import { NetworkMap } from "./components/NetworkMap.js";
 import { DeviceDetailPanel } from "./components/DeviceDetailPanel.js";
 import { DeviceCard } from "./components/DeviceCard.js";
 import { EventFeed } from "./components/EventFeed.js";
+import { NameDevices } from "./components/NameDevices.js";
 
 type Filter = "all" | "online" | "untrusted" | "new";
 
@@ -34,6 +35,7 @@ export default function App() {
   const [connected, setConnected] = useState(true);
   // Distinguishes "no devices" from "we haven't asked yet".
   const [loaded, setLoaded] = useState(false);
+  const [naming, setNaming] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -172,6 +174,7 @@ export default function App() {
   );
 
   const byId = useMemo(() => new Map(devices.map((d) => [d.id, d])), [devices]);
+  const unnamedCount = useMemo(() => devices.filter((d) => !d.label).length, [devices]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -219,6 +222,10 @@ export default function App() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+      {naming && (
+        <NameDevices devices={devices} onRename={rename} onClose={() => setNaming(false)} />
+      )}
+
       {/* Everything below this banner is last-known state, not live state. Say
           so loudly — a confident stale network map is this tool's worst lie. */}
       {!connected && (
@@ -270,6 +277,13 @@ export default function App() {
               {testMsg || (ntfy.configured ? "alerts on" : "alerts off")}
             </button>
           )}
+          <button
+            onClick={() => setNaming(true)}
+            title="Name your devices in one list"
+            className="rounded-lg bg-white/5 px-3 py-2 text-xs text-zinc-300 transition-colors hover:bg-white/10 hover:text-white"
+          >
+            ✎ Name devices{unnamedCount > 0 ? ` (${unnamedCount})` : ""}
+          </button>
           <button
             onClick={triggerScan}
             disabled={scanning}
