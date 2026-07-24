@@ -25,7 +25,18 @@ export interface ScanSummary {
   cidr: string;
   iface: string;
   hostCount: number;
+  /** True when this scan ran away from home - alerts and autoscans muted. */
+  away: boolean;
   diff: { newDevices: string[]; cameOnline: string[]; wentOffline: string[] };
+}
+
+export interface HomeStatus {
+  /** Anchored home-gateway MACs. */
+  gateways: string[];
+  /** Gateway of the most recent scan, nulls before any scan completes. */
+  current: { gatewayIp: string | null; gatewayMac: string | null };
+  /** True when the current network's gateway is not anchored. */
+  away: boolean;
 }
 
 export interface NetEvent {
@@ -82,8 +93,11 @@ export const api = {
         ntfy: NtfyStatus;
         ispName: string;
         guestModeMsLeft: number;
+        home: HomeStatus;
       }>
     ),
+  home: () => fetch("/api/home").then(json<HomeStatus>),
+  anchorHome: () => fetch("/api/home/anchor", { method: "POST" }).then(json<HomeStatus>),
   notifyTest: () =>
     fetch("/api/notify/test", { method: "POST" }).then((r) => r.ok),
   guestMode: (hours: number) =>

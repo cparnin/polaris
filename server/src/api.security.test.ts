@@ -211,3 +211,41 @@ test("guest mode mutes alerts on a timer and validates its input", async () => {
     assert.equal(bad.status, 400, `hours=${hours} must be refused`);
   }
 });
+
+test("home-anchor endpoints are CSRF-protected and validate their input", async () => {
+  // Anchoring decides where alerts fire; a cross-site page must not be able to
+  // bless its own network (or un-bless yours) with an auto-submitting form.
+  const csrf = await fetch(`${BASE}/api/home/anchor`, {
+    method: "POST",
+    headers: { Origin: "https://evil.com" },
+  });
+  assert.equal(csrf.status, 403);
+
+  // The :mac param lands in a JSON meta row; only a real MAC gets through.
+  for (const mac of ["not-a-mac", "e4:19:7f:cd:ad", "aa:bb:cc:dd:ee:ff:00", "..%2f"]) {
+    const bad = await fetch(`${BASE}/api/home/anchor/${encodeURIComponent(mac)}`, {
+      method: "DELETE",
+      headers: { Origin: BASE },
+    });
+    assert.equal(bad.status, 400, `mac=${mac} must be refused`);
+  }
+
+  // A well-formed MAC that isn't anchored is a 404, not a silent 200.
+  const gone = await fetch(`${BASE}/api/home/anchor/aa:bb:cc:dd:ee:ff`, {
+    method: "DELETE",
+    headers: { Origin: BASE },
+  });
+  assert.equal(gone.status, 404);
+});
+
+test("GET /api/home reports the anchor state in the documented shape", async () => {
+  // The background scan may or may not have finished (and adopted a gateway)
+  // by now, so assert the shape, not the timing-dependent contents.
+  const status = await (await fetch(`${BASE}/api/home`)).json();
+  assert.ok(Array.isArray(status.gateways));
+  assert.equal(typeof status.away, "boolean");
+  assert.ok("gatewayIp" in status.current && "gatewayMac" in status.current);
+
+  const health = await (await fetch(`${BASE}/api/health`)).json();
+  assert.deepEqual(health.home.gateways, status.gateways, "health carries the same anchor state");
+});

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
-import { api, displayName, type Device, type ScanSummary, type NetEvent, type NtfyStatus } from "./api.js";
+import { api, displayName, type Device, type ScanSummary, type NetEvent, type NtfyStatus, type HomeStatus } from "./api.js";
 import { StatBar } from "./components/StatBar.js";
 import { NetworkMap } from "./components/NetworkMap.js";
 import { DeviceDetailPanel } from "./components/DeviceDetailPanel.js";
@@ -39,6 +39,9 @@ export default function App() {
   // ms of guest mode left; 0 = off. Guests' phones use randomized MACs, so each
   // visit looks like a brand-new device and fires another push.
   const [guestMs, setGuestMs] = useState(0);
+  // Away from an anchored home gateway: alerts + autoscans muted, banner shown.
+  const [home, setHome] = useState<HomeStatus | null>(null);
+  const [anchorMsg, setAnchorMsg] = useState("");
 
   const refresh = useCallback(async () => {
     try {
@@ -63,6 +66,7 @@ export default function App() {
         setNtfy(h.ntfy);
         if (h.ispName) setIspName(h.ispName);
         setGuestMs(h.guestModeMsLeft ?? 0);
+        setHome(h.home ?? null);
       })
       .catch(() => setNtfy(null));
   }, [refresh]);
@@ -91,6 +95,8 @@ export default function App() {
         });
       }
       void refresh();
+      // Each scan re-evaluates which network we're on; keep the banner honest.
+      void api.home().then(setHome).catch(() => {});
     });
     es.addEventListener("scan:error", () => setScanning(false));
     es.addEventListener("scan:paused", (ev) => {
@@ -139,6 +145,18 @@ export default function App() {
       setGuestMs(r.msLeft);
     } catch {
       setGuestMs(prev);
+    }
+  };
+
+  // "This is my home network": anchor the current gateway so alerts work here.
+  const anchorHere = async () => {
+    setAnchorMsg("anchoring…");
+    try {
+      setHome(await api.anchorHome());
+      setAnchorMsg("");
+    } catch {
+      setAnchorMsg("failed - wait for a scan to finish and try again");
+      setTimeout(() => setAnchorMsg(""), 5000);
     }
   };
 
@@ -262,6 +280,33 @@ export default function App() {
             state - it may be out of date. Retrying automatically; if it doesn't come back, run{" "}
             <code className="rounded bg-black/30 px-1 py-0.5 text-amber-100">./polaris status</code>.
           </span>
+        </div>
+      )}
+
+      {/* Not home: the laptop followed you onto someone else's Wi-Fi. Say so,
+          say what's muted, and offer the one-click way to bless this network
+          (e.g. your own guest SSID) as home too. */}
+      {home?.away && (
+        <div
+          role="status"
+          className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-sm text-sky-200"
+        >
+          <span aria-hidden="true">🧭</span>
+          <span className="flex-1">
+            <span className="font-semibold">Away from your home network.</span> New-device alerts
+            and automatic port scans are off here
+            {home.current.gatewayIp ? (
+              <> (gateway {home.current.gatewayIp}
+                {home.current.gatewayMac ? `, ${home.current.gatewayMac}` : ""})</>
+            ) : null}
+            . Devices are still recorded.
+          </span>
+          <button
+            onClick={anchorHere}
+            className="rounded-lg bg-sky-500/20 px-3 py-1.5 text-xs font-semibold text-sky-100 transition-colors hover:bg-sky-500/30"
+          >
+            {anchorMsg || "This is my home network"}
+          </button>
         </div>
       )}
 

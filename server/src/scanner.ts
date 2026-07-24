@@ -13,6 +13,7 @@ import { portScan, type PortScanResult } from "./net/portscan.js";
 import { notifyNewDevice, isNtfyConfigured, sendNtfy, buildHeartbeatAlert } from "./notify.js";
 import { getMeta, setMeta } from "./db.js";
 import { resolveCount, applyResolved } from "./config.js";
+import { updateHomeState } from "./home.js";
 
 export interface ScanSummary {
   startedAt: number;
@@ -21,6 +22,8 @@ export interface ScanSummary {
   cidr: string;
   iface: string;
   hostCount: number;
+  /** True when this scan ran away from home - alerts and autoscans muted. */
+  away: boolean;
   diff: ScanDiff;
 }
 
@@ -191,12 +194,26 @@ export async function runScan(): Promise<ScanSummary> {
     const diff = applyScan(toSeen(result), now);
     pruneEvents(); // keep the activity log (and the SQLite WAL) bounded
 
+    // Which network are we even on? Away from home (gateway not anchored),
+    // everything below still records, but nothing pushes and nothing gets
+    // auto port-scanned - a coffee shop full of "new devices" is not news,
+    // and nmap-ing hosts you don't own is not a favor.
+    const gatewayMac =
+      result.hosts.find((h) => h.ip === result.net.gateway)?.mac ?? null;
+    const away = updateHomeState(result.net.gateway ?? null, gatewayMac);
+
     // A device joining is exactly when you want to know what it exposes, so
     // fingerprint new arrivals and fold the findings into the alert. Runs
     // detached: nmap takes tens of seconds and must not stall the scan loop.
     // Skipped on the baseline scan, where every device is "new".
     if (!isBaseline && diff.newDevices.length) {
-      void handleNewDevices(diff.newDevices);
+      if (away) {
+        console.log(
+          `[home] away from home network - muted ${diff.newDevices.length} new-device alert(s)`
+        );
+      } else {
+        void handleNewDevices(diff.newDevices);
+      }
     }
     const summary: ScanSummary = {
       startedAt: result.startedAt,
@@ -205,6 +222,7 @@ export async function runScan(): Promise<ScanSummary> {
       cidr: result.net.cidr,
       iface: result.net.iface,
       hostCount: result.hosts.length,
+      away,
       diff,
     };
     lastSummary = summary;

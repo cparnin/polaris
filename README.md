@@ -91,6 +91,16 @@ Subscribe in the ntfy app, then click **alerts on** to send a test.
 Having people over? **Guest mode** mutes new-device pushes for 4 hours. Visitors'
 phones use randomized MACs, so they look like a new device every visit.
 
+**Home network anchor.** Polaris runs on a laptop, and laptops travel. It
+identifies your home network by its router's MAC address (learned automatically
+on first run). On any other network, devices are still discovered and recorded,
+but nothing pushes to your phone and nothing gets auto port-scanned, so a
+friend's house does not arrive as a stack of "new device" alerts. The dashboard
+shows an "Away from your home network" banner with a one-click **This is my home
+network** button; use it once on each network you want alerts on (for example a
+guest SSID whose gateway shows a different MAC). Anchors are a set, managed via
+`GET /api/home`, `POST /api/home/anchor`, `DELETE /api/home/anchor/:mac`.
+
 ## Configuration
 
 All optional. See [`.env.example`](./.env.example) for the full list.

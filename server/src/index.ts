@@ -31,6 +31,7 @@ import {
   type ScanSummary,
 } from "./scanner.js";
 import { ntfyStatus, isNtfyConfigured, sendNtfy } from "./notify.js";
+import { homeStatus, anchorCurrentGateway, removeHomeGateway } from "./home.js";
 
 const PORT = Number(process.env.PORT ?? 4000);
 // Bind to loopback by default: the API exposes your full device inventory, so
@@ -102,7 +103,40 @@ app.get("/api/health", (_req, res) => {
     ntfy: ntfyStatus(),
     guestModeMsLeft: guestModeRemaining(),
     ispName: ISP_NAME,
+    home: homeStatus(),
   });
+});
+
+// Home-network anchor: which gateway MACs count as "home". Away from an
+// anchored gateway, new-device pushes and auto port-scans are muted (devices
+// are still discovered and recorded). See ./home.ts for the reasoning.
+app.get("/api/home", (_req, res) => {
+  res.json(homeStatus());
+});
+
+// "This is my home network": anchor the current network's gateway. Covers
+// multi-gateway homes (guest SSID, second AP) one click at a time.
+app.post("/api/home/anchor", (_req, res) => {
+  try {
+    res.json(anchorCurrentGateway());
+  } catch (err) {
+    res.status(409).json({ error: (err as Error).message });
+  }
+});
+
+// Un-anchor a gateway (e.g. a mis-adopted one). The MAC is untrusted input
+// headed for a JSON meta row; only a plain colon-separated MAC gets through.
+app.delete("/api/home/anchor/:mac", (req, res) => {
+  const mac = req.params.mac.toLowerCase();
+  if (!/^([0-9a-f]{2}:){5}[0-9a-f]{2}$/.test(mac)) {
+    res.status(400).json({ error: "not a MAC address" });
+    return;
+  }
+  if (!removeHomeGateway(mac)) {
+    res.status(404).json({ error: "gateway is not anchored" });
+    return;
+  }
+  res.json(homeStatus());
 });
 
 // Pause / resume the auto-scan loop. Pausing stops all scanning (and its CPU +

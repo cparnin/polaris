@@ -41,6 +41,13 @@ production build: **a single ~80MB Node process on http://127.0.0.1:4000**.
   timestamp lives in the `meta` table so restarts neither re-send nor lose it.
 - New devices are auto port-scanned on arrival (`AUTOSCAN_NEW_DEVICES=0` to
   disable), and the finding is folded into the ntfy alert.
+- **Home network anchor (`home.ts`):** the network is identified by its
+  gateway's MAC (meta key `homeGateways`, a JSON array; adopted automatically
+  when empty). Away from an anchored gateway, new-device pushes AND autoscans
+  are muted, but discovery still records everything. An unresolvable gateway
+  MAC counts as away on purpose: the home router is always in ARP, and muting
+  is the cheaper mistake. Endpoints: `GET /api/home`, `POST /api/home/anchor`,
+  `DELETE /api/home/anchor/:mac`.
 
 ## Definition of done
 
