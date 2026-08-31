@@ -28,6 +28,28 @@ test("renders identity and the persisted open ports", () => {
   expect(screen.getByText(/1 risky exposure/)).toBeInTheDocument();
 });
 
+test("the name can be renamed in place when onRename is provided", () => {
+  const onRename = vi.fn();
+  const d = makeDevice({ id: "tv", hostname: "Office-TV", ip: "192.168.4.7" });
+  render(
+    <DeviceDetailPanel device={d} onClose={() => {}} onScanned={() => {}} onRename={onRename} />
+  );
+  fireEvent.click(screen.getByText("Office-TV"));
+  const input = screen.getByPlaceholderText("name this device");
+  fireEvent.change(input, { target: { value: "Living room TV" } });
+  fireEvent.keyDown(input, { key: "Enter" });
+  fireEvent.blur(input);
+  expect(onRename).toHaveBeenCalledWith("tv", "Living room TV");
+});
+
+test("the trust chip toggles trust when onTrust is provided", () => {
+  const onTrust = vi.fn();
+  const d = makeDevice({ id: "iot", hostname: "Bulb", trusted: 0 });
+  render(<DeviceDetailPanel device={d} onClose={() => {}} onScanned={() => {}} onTrust={onTrust} />);
+  fireEvent.click(screen.getByRole("button", { name: /Untrusted - trust\?/ }));
+  expect(onTrust).toHaveBeenCalledWith("iot", true);
+});
+
 test("running a scan calls the API and reports back", async () => {
   vi.spyOn(api, "portScan").mockResolvedValue({
     available: true,

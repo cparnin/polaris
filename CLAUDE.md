@@ -97,12 +97,14 @@ No change is finished until all of these are true. Don't ask whether to do them
   192.168.x and 172.16.x) never matches. That silently hid every ARP-known host
   that doesn't answer ICMP. Correct versions: `discover.ts:inSubnet` and
   `portscan.ts:assertInSubnet`.
-- **React's synthetic `onWheel` is registered PASSIVE**, so `preventDefault()`
-  inside it is silently ignored: zooming the map also scrolled the page. The
-  map attaches its own non-passive wheel listener, and the pan/zoom camera
-  lives in a ref applied straight to the DOM (`NetworkMap.tsx`), because
-  routing it through `setState` re-rendered every node on every wheel tick.
-  Don't move the camera back into React state.
+- **The topology is plain DOM on purpose (`TopologyView.tsx`), not a pan/zoom
+  SVG canvas.** The old zoomable map hijacked the wheel anywhere over it,
+  needed non-passive listeners and a ref-based camera to stay smooth (React's
+  synthetic `onWheel` is passive, so `preventDefault()` is silently ignored),
+  and still felt wrong when you scrolled at the wrong spot. Don't bring the
+  canvas back: the map-like feel comes from layout (tiers, zones, tiles), and
+  the page just scrolls. Device management (rename, trust, port scan, forget)
+  all lives in `DeviceDetailPanel`, opened by clicking a tile.
 - **Browser caches the content-hashed bundle.** After a rebuild, hard-reload or
   append `?v=N`, or you'll debug stale JS.
 - **Device identity:** `id` is the MAC, falling back to `ip:<addr>` when the MAC

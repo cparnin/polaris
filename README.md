@@ -60,8 +60,9 @@ That is the whole interface.
   open. A failed push is queued and retried on later scans, not lost, and the
   dashboard pill turns amber when pushes are bouncing. A heartbeat every 7
   days, so silence means something is wrong.
-- **Maps it.** Live topology grouped by trust or device type, firewall boundary
-  drawn in, exposure badges on each node. Scroll or pinch to zoom, drag to pan.
+- **Maps it.** The device list IS the topology: Internet → gateway → firewall
+  boundary → zones grouped by trust or device type, with an exposure badge on
+  every tile. Click a tile to rename, trust, or port-scan it.
 - **Remembers.** SQLite history that survives restarts.
 
 ## Requirements
@@ -149,8 +150,9 @@ npm rebuild better-sqlite3 && ./polaris restart
 **A device is missing.** It may be on your guest network, a separate isolated
 subnet that Polaris cannot see. That is the guest network working.
 
-**Nothing on the map.** Offline devices are hidden by default. Click
-**show offline**.
+**A known device isn't shown.** Offline devices are hidden by default. Click
+**show offline**, or just search for it - search always looks through offline
+devices too.
 
 ## License
 

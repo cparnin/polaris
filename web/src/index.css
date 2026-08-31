@@ -17,25 +17,6 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Network map nodes: hover/focus emphasis in CSS so pointing at a device
-   doesn't re-render the whole SVG through React state. */
-.map-node {
-  cursor: pointer;
-  outline: none;
-}
-.map-node .map-ring,
-.map-node .map-label {
-  transition: stroke-width 120ms ease, fill 120ms ease;
-}
-.map-node:hover .map-ring,
-.map-node:focus-visible .map-ring {
-  stroke-width: 3;
-}
-.map-node:hover .map-label,
-.map-node:focus-visible .map-label {
-  fill: #fafafa;
-}
-
 @keyframes pulse-ring {
   0% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.5); }
   70% { box-shadow: 0 0 0 6px rgba(52, 211, 153, 0); }

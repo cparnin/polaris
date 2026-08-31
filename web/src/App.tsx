@@ -1,13 +1,12 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { api, displayName, type Device, type ScanSummary, type NetEvent, type NtfyStatus, type HomeStatus } from "./api.js";
 import { StatBar } from "./components/StatBar.js";
-import { NetworkMap } from "./components/NetworkMap.js";
+import { TopologyView } from "./components/TopologyView.js";
 import { DeviceDetailPanel } from "./components/DeviceDetailPanel.js";
-import { DeviceCard } from "./components/DeviceCard.js";
 import { EventFeed } from "./components/EventFeed.js";
 import { NameDevices } from "./components/NameDevices.js";
 
-type Filter = "all" | "online" | "untrusted" | "risky" | "new";
+type Filter = "all" | "untrusted" | "risky" | "new";
 
 /** How long a device stays flagged NEW before the badge expires on its own. */
 const NEW_BADGE_MS = 6 * 60 * 60 * 1000; // 6 hours
@@ -244,7 +243,6 @@ export default function App() {
     const q = query.trim().toLowerCase();
     return devices
       .filter((d) => {
-        if (filter === "online" && d.online !== 1) return false;
         if (filter === "untrusted" && (d.trusted === 1 || d.online !== 1)) return false;
         if (filter === "risky" && (d.risk_count ?? 0) === 0) return false;
         if (filter === "new" && !newIds.has(d.id)) return false;
@@ -266,7 +264,6 @@ export default function App() {
 
   const filters: [Filter, string][] = [
     ["all", "All"],
-    ["online", "Online"],
     ["untrusted", "Untrusted"],
     ["risky", "Risky"],
     ["new", "New"],
@@ -453,12 +450,10 @@ export default function App() {
 
       <StatBar devices={devices} loading={!loaded} />
 
-      <NetworkMap devices={devices} onInspect={(d) => setInspectId(d.id)} ispName={ispName} />
-
-      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_340px]">
-        {/* Devices */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_340px]">
+        {/* The topology IS the device list: search and filters narrow its tiles. */}
         <div>
-          <div className="mb-4 flex flex-wrap items-center gap-2">
+          <div className="mt-6 flex flex-wrap items-center gap-2">
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -482,28 +477,20 @@ export default function App() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {filtered.map((d) => (
-              <DeviceCard
-                key={d.id}
-                device={d}
-                isNew={newIds.has(d.id)}
-                onRename={rename}
-                onTrust={trust}
-              />
-            ))}
-          </div>
-          {filtered.length === 0 && (
-            <div className="rounded-xl border border-dashed border-white/10 py-12 text-center text-sm text-zinc-500">
-              {devices.length === 0
-                ? "First scan running - devices will appear here shortly."
-                : "No devices match this filter."}
-            </div>
-          )}
+          <TopologyView
+            devices={devices}
+            visible={filtered}
+            newIds={newIds}
+            queryActive={query.trim().length > 0}
+            onInspect={(d) => setInspectId(d.id)}
+            ispName={ispName}
+          />
         </div>
 
         {/* Activity feed */}
-        <EventFeed events={events} byId={byId} />
+        <div className="mt-6">
+          <EventFeed events={events} byId={byId} />
+        </div>
       </div>
 
       <footer className="mt-8 text-center text-xs text-zinc-500">
@@ -516,6 +503,8 @@ export default function App() {
           device={byId.get(inspectId)!}
           onClose={() => setInspectId(null)}
           onScanned={refresh}
+          onRename={rename}
+          onTrust={trust}
         />
       )}
     </div>

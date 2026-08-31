@@ -4,23 +4,34 @@ import { api, displayName } from "../api.js";
 import { deviceIcon, relTime } from "../deviceMeta.js";
 
 /**
- * Slide-in inspector for a single device: identity plus an on-demand nmap
- * service scan (open ports, detected services, and risky-exposure flags). This
- * is what turns the map into a security tool - click a node, see what it's
- * actually exposing on the LAN.
+ * Slide-in inspector for a single device: identity, rename, trust, plus an
+ * on-demand nmap service scan (open ports, detected services, and
+ * risky-exposure flags). With the compact topology tiles this panel is the
+ * single place a device gets managed - click a tile, do everything here.
  */
 export function DeviceDetailPanel({
   device: d,
   onClose,
   onScanned,
+  onRename,
+  onTrust,
 }: {
   device: Device;
   onClose: () => void;
   onScanned: () => void;
+  onRename?: (id: string, label: string) => void;
+  onTrust?: (id: string, trusted: boolean) => void;
 }) {
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<PortScanResult | null>(null);
   const [confirmForget, setConfirmForget] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(d.label ?? "");
+  // Re-seed the draft when not editing, so a rename from elsewhere (another
+  // tab, the bulk-naming modal) isn't silently reverted on blur.
+  useEffect(() => {
+    if (!editing) setDraft(d.label ?? "");
+  }, [d.label, editing]);
 
   const forget = async () => {
     await api.forget(d.id).catch(() => {});
@@ -98,7 +109,34 @@ export function DeviceDetailPanel({
           <div className="flex min-w-0 items-center gap-3">
             <span className="text-2xl">{deviceIcon(d)}</span>
             <div className="min-w-0">
-              <h2 className="truncate text-base font-semibold text-white">{displayName(d)}</h2>
+              {editing ? (
+                <input
+                  autoFocus
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onBlur={() => {
+                    setEditing(false);
+                    if (draft !== (d.label ?? "")) onRename?.(d.id, draft);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                    if (e.key === "Escape") {
+                      setDraft(d.label ?? "");
+                      setEditing(false);
+                    }
+                  }}
+                  placeholder="name this device"
+                  className="w-full rounded bg-black/40 px-1 text-base font-semibold text-white outline-none ring-1 ring-white/20"
+                />
+              ) : (
+                <button
+                  onClick={onRename ? () => setEditing(true) : undefined}
+                  title={onRename ? "Click to rename" : undefined}
+                  className="block max-w-full truncate text-left text-base font-semibold text-white hover:underline"
+                >
+                  {displayName(d)}
+                </button>
+              )}
               <p className="text-xs text-zinc-500">
                 {d.ip}
                 {d.mac ? ` · ${d.mac}` : ""}
@@ -117,7 +155,23 @@ export function DeviceDetailPanel({
         {/* identity facts */}
         <dl className="grid grid-cols-2 gap-x-4 gap-y-3 px-5 py-4 text-sm">
           <Fact label="Status" value={d.online ? "Online" : "Offline"} accent={d.online ? "text-emerald-400" : "text-zinc-500"} />
-          <Fact label="Trust" value={d.trusted ? "Trusted" : "Untrusted"} accent={d.trusted ? "text-emerald-400" : "text-amber-400"} />
+          <div>
+            <dt className="text-xs uppercase tracking-wide text-zinc-500">Trust</dt>
+            <dd className="mt-0.5">
+              <button
+                onClick={() => onTrust?.(d.id, d.trusted === 0)}
+                disabled={!onTrust}
+                title={d.trusted ? "Click to mark untrusted" : "Click to mark trusted"}
+                className={`rounded-md px-2 py-0.5 text-sm transition-colors ${
+                  d.trusted
+                    ? "bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25"
+                    : "bg-amber-500/15 text-amber-400 hover:bg-amber-500/25"
+                } disabled:cursor-default`}
+              >
+                {d.trusted ? "✓ Trusted" : "Untrusted - trust?"}
+              </button>
+            </dd>
+          </div>
           <Fact label="Vendor" value={d.vendor ?? "-"} />
           <Fact label="OS hint" value={d.os_guess ?? "-"} />
           {d.randomized === 1 && <Fact label="MAC" value="Randomized (privacy)" accent="text-sky-400" />}

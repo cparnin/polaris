@@ -79,13 +79,11 @@ test("the Risky filter shows only devices with risky ports", async () => {
     makeDevice({ id: "tv", hostname: "SafeTV", online: 1, ip: "192.168.4.7", risk_count: 0, last_portscan_at: 1 }),
   ];
   render(<App />);
-  // names show in both the map and the card list; the trust button exists
-  // only on cards, which is the list the filter controls
-  await screen.findByRole("button", { name: "Mark SafeTV as trusted" });
+  await screen.findByRole("button", { name: /SafeTV.*open details/ });
 
   fireEvent.click(screen.getByRole("button", { name: "Risky" }));
-  expect(screen.getByRole("button", { name: "Mark NAS as trusted" })).toBeInTheDocument();
-  expect(screen.queryByRole("button", { name: "Mark SafeTV as trusted" })).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /NAS.*open details/ })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /SafeTV.*open details/ })).not.toBeInTheDocument();
 });
 
 test("the alerts pill says failing when the last push bounced", async () => {
