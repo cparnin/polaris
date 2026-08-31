@@ -178,6 +178,67 @@ test("offline devices are hidden by default but can be shown", () => {
   expect(screen.getByRole("button", { name: /Nest-Cam.*offline/i })).toBeInTheDocument();
 });
 
+test("wheel zoom actually prevents the page from scrolling", () => {
+  // React registers its synthetic onWheel as a PASSIVE listener, so an
+  // e.preventDefault() inside it is silently ignored: zooming the map also
+  // scrolled the page. The map attaches its own non-passive listener; this
+  // pins that the wheel event really is consumed.
+  render(
+    <NetworkMap
+      devices={[makeDevice({ id: "gw", is_gateway: 1, hostname: "eero", online: 1, ip: "192.168.4.1" })]}
+    />
+  );
+  const svg = screen.getByRole("group", { name: /Network map/ });
+  const evt = new WheelEvent("wheel", { deltaY: -100, cancelable: true, bubbles: true });
+  svg.dispatchEvent(evt);
+  expect(evt.defaultPrevented).toBe(true);
+});
+
+test("zoom buttons and reset drive the camera transform directly", () => {
+  const { container } = render(
+    <NetworkMap
+      devices={[makeDevice({ id: "gw", is_gateway: 1, hostname: "eero", online: 1, ip: "192.168.4.1" })]}
+    />
+  );
+  const camera = container.querySelector("svg > g") as SVGGElement;
+  expect(camera.style.transform).toContain("scale(1)");
+
+  fireEvent.click(screen.getByLabelText("Zoom in"));
+  expect(camera.style.transform).toContain("scale(1.3)");
+
+  fireEvent.click(screen.getByLabelText("Reset view"));
+  expect(camera.style.transform).toContain("scale(1)");
+});
+
+test("a drag pan does not open the device panel, a plain click still does", () => {
+  const onInspect = vi.fn();
+  render(
+    <NetworkMap
+      devices={[makeDevice({ id: "tv", hostname: "Office-TV", online: 1, trusted: 1, ip: "192.168.4.7" })]}
+      onInspect={onInspect}
+    />
+  );
+  const svg = screen.getByRole("group", { name: /Network map/ });
+  const node = screen.getByText("Office-TV");
+  // jsdom has no PointerEvent, and fireEvent's fallback drops clientX/Y, so
+  // build the pointer events out of MouseEvent to keep real coordinates.
+  const pointer = (type: string, x: number, y: number) =>
+    svg.dispatchEvent(new MouseEvent(type, { clientX: x, clientY: y, bubbles: true }));
+
+  // drag: pointer moves well past the click-slop threshold before release
+  pointer("pointerdown", 10, 10);
+  pointer("pointermove", 60, 40);
+  pointer("pointerup", 60, 40);
+  fireEvent.click(node);
+  expect(onInspect).not.toHaveBeenCalled();
+
+  // plain click: no movement between down and up
+  pointer("pointerdown", 10, 10);
+  pointer("pointerup", 10, 10);
+  fireEvent.click(node);
+  expect(onInspect).toHaveBeenCalledOnce();
+});
+
 test("devices can be grouped by what they are instead of trust", () => {
   render(
     <NetworkMap

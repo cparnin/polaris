@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { Device } from "../api.js";
 import { displayName } from "../api.js";
 import { deviceIcon, scanStatus } from "../deviceMeta.js";
@@ -44,6 +44,10 @@ const MAX_COLS = 4;
 const HEADER_H = 38;
 const BOX_PAD = 12;
 const GROUP_GAP = 40;
+
+// Camera limits.
+const MIN_SCALE = 0.4;
+const MAX_SCALE = 4;
 
 /**
  * Grouping by what a device IS, as an alternative to whether you trust it.
@@ -94,12 +98,25 @@ function clamp(v: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, v));
 }
 
+interface View {
+  tx: number;
+  ty: number;
+  scale: number;
+}
+
 /**
  * Tiered network topology: Internet / ISP → your gateway → the LAN, with
- * devices clustered into Trusted / Untrusted zones. Scroll to zoom, drag to
- * pan, collapse a zone, and click a device to inspect it (identity + port
- * scan). Nodes carry an exposure badge once scanned, so the whole map reads as
- * a live security view.
+ * devices clustered into Trusted / Untrusted zones. Scroll or pinch to zoom,
+ * drag to pan, collapse a zone, and click a device to inspect it (identity +
+ * port scan). Nodes carry an exposure badge once scanned, so the whole map
+ * reads as a live security view.
+ *
+ * The camera (pan/zoom) is deliberately NOT React state. It lives in a ref and
+ * is applied straight to the <g> as a CSS transform, coalesced to one write
+ * per frame. Routing it through setState re-rendered every node on every wheel
+ * tick and drag pixel, and React 17+ attaches its synthetic onWheel listener
+ * as PASSIVE, so preventDefault was silently ignored and the page scrolled
+ * behind the zoom. That combination was the jank.
  */
 export function NetworkMap({
   devices,
@@ -111,15 +128,15 @@ export function NetworkMap({
   ispName?: string;
 }) {
   const [open, setOpen] = useState(true);
-  const [hover, setHover] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-  const [view, setView] = useState({ tx: 0, ty: 0, scale: 1 });
   // Offline devices were hidden outright, so an unplugged camera simply wasn't
   // on the map and there was no way to tell that from "never existed".
   const [showOffline, setShowOffline] = useState(false);
   const [groupBy, setGroupBy] = useState<"trust" | "kind">("trust");
 
   const svgRef = useRef<SVGSVGElement | null>(null);
+  const gRef = useRef<SVGGElement | null>(null);
+  const view = useRef<View>({ tx: 0, ty: 0, scale: 1 });
   const drag = useRef<{ x: number; y: number; tx: number; ty: number } | null>(null);
   const moved = useRef(false);
 
@@ -172,54 +189,111 @@ export function NetworkMap({
     return { hub, groups: built, onlineCount: online.length, height, width };
   }, [devices, collapsed, showOffline, groupBy]);
 
-  // --- pan / zoom ---------------------------------------------------------
-  function toSvg(clientX: number, clientY: number): [number, number] {
-    const rect = svgRef.current?.getBoundingClientRect();
-    if (!rect || rect.width === 0) return [0, 0];
-    return [((clientX - rect.left) * W) / rect.width, ((clientY - rect.top) * H) / rect.height];
-  }
+  // The wheel handler is attached once and reads dimensions through this ref,
+  // so it can't go stale when the canvas grows.
+  const dims = useRef({ W, H });
+  dims.current = { W, H };
 
-  function onWheel(e: React.WheelEvent) {
-    e.preventDefault();
-    const [sx, sy] = toSvg(e.clientX, e.clientY);
-    // Exponential zoom keyed to scroll distance: a mouse-wheel notch (large
-    // deltaY) makes a modest step, a trackpad (many small deltas) stays smooth.
-    // Clamp per-event so a fast flick can't jump scale in one frame.
-    const step = clamp(-e.deltaY * 0.002, -0.25, 0.25);
-    const scale = clamp(view.scale * Math.exp(step), 0.5, 3);
-    const worldX = (sx - view.tx) / view.scale;
-    const worldY = (sy - view.ty) / view.scale;
-    setView({ scale, tx: sx - worldX * scale, ty: sy - worldY * scale });
-  }
+  // --- camera -------------------------------------------------------------
+  // Written straight to the DOM: wheel and pointermove events are already
+  // frame-aligned in modern browsers, so this is one style write per frame
+  // with no scheduling to go stale or wedge.
+  const applyView = useCallback((animate = false) => {
+    const g = gRef.current;
+    if (!g) return;
+    const { tx, ty, scale } = view.current;
+    g.style.transition = animate ? "transform 250ms cubic-bezier(0.22, 1, 0.36, 1)" : "none";
+    g.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+  }, []);
 
+  // Re-assert the camera after any React commit; the <g> remounts when the
+  // section is hidden and shown again, which would otherwise reset it.
+  useLayoutEffect(() => applyView(false));
+
+  /** Keep at least a fifth of the canvas on screen so the map can't be lost. */
+  const clampView = useCallback((v: View): View => {
+    const { W, H } = dims.current;
+    const scale = clamp(v.scale, MIN_SCALE, MAX_SCALE);
+    return {
+      scale,
+      tx: clamp(v.tx, W * 0.2 - W * scale, W * 0.8),
+      ty: clamp(v.ty, H * 0.2 - H * scale, H * 0.8),
+    };
+  }, []);
+
+  /** Client px → SVG user units, correct even when the SVG letterboxes. */
+  const toSvg = useCallback((clientX: number, clientY: number): [number, number] => {
+    const ctm = svgRef.current?.getScreenCTM?.();
+    if (!ctm) return [dims.current.W / 2, dims.current.H / 2];
+    const p = new DOMPoint(clientX, clientY).matrixTransform(ctm.inverse());
+    return [p.x, p.y];
+  }, []);
+
+  /** Zoom keeping the SVG point (sx, sy) fixed under the cursor. */
+  const zoomAt = useCallback(
+    (sx: number, sy: number, factor: number, animate = false) => {
+      const v = view.current;
+      const scale = clamp(v.scale * factor, MIN_SCALE, MAX_SCALE);
+      const k = scale / v.scale;
+      view.current = clampView({ scale, tx: sx - (sx - v.tx) * k, ty: sy - (sy - v.ty) * k });
+      applyView(animate);
+    },
+    [applyView, clampView]
+  );
+
+  const onWheel = useCallback(
+    (e: WheelEvent) => {
+      e.preventDefault();
+      const [sx, sy] = toSvg(e.clientX, e.clientY);
+      // ctrl+wheel is how browsers report a trackpad pinch: small deltas that
+      // deserve a stronger response than a mouse wheel notch. Exponential
+      // steps keep both smooth; the clamp stops a flick from jumping scale.
+      const step = clamp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0022), -0.4, 0.4);
+      zoomAt(sx, sy, Math.exp(step));
+    },
+    [toSvg, zoomAt]
+  );
+
+  // React's synthetic onWheel is registered passive, so preventDefault can't
+  // stop the page scrolling behind the zoom. Attach a real non-passive
+  // listener; a callback ref keeps it alive across the section hiding/showing.
+  const setSvgRef = useCallback(
+    (node: SVGSVGElement | null) => {
+      svgRef.current?.removeEventListener("wheel", onWheel);
+      svgRef.current = node;
+      node?.addEventListener("wheel", onWheel, { passive: false });
+    },
+    [onWheel]
+  );
+
+  // --- pan ----------------------------------------------------------------
   function onPointerDown(e: React.PointerEvent) {
-    drag.current = { x: e.clientX, y: e.clientY, tx: view.tx, ty: view.ty };
+    drag.current = { x: e.clientX, y: e.clientY, tx: view.current.tx, ty: view.current.ty };
     moved.current = false;
     (e.target as Element).setPointerCapture?.(e.pointerId);
   }
   function onPointerMove(e: React.PointerEvent) {
     const start = drag.current;
     if (!start) return;
-    const rect = svgRef.current?.getBoundingClientRect();
-    const k = rect && rect.width ? W / rect.width : 1;
-    const dx = (e.clientX - start.x) * k;
-    const dy = (e.clientY - start.y) * k;
-    if (Math.abs(dx) + Math.abs(dy) > 3) moved.current = true;
-    // Capture start values - the updater may run after pointerup nulls drag.current.
-    setView((v) => ({ ...v, tx: start.tx + dx, ty: start.ty + dy }));
+    const dx = e.clientX - start.x;
+    const dy = e.clientY - start.y;
+    if (Math.abs(dx) + Math.abs(dy) > 4) moved.current = true;
+    // Uniform scale, so one matrix entry converts client px to SVG units.
+    const k = svgRef.current?.getScreenCTM?.()?.inverse().a ?? 1;
+    view.current = clampView({ ...view.current, tx: start.tx + dx * k, ty: start.ty + dy * k });
+    applyView(false);
   }
   function onPointerUp() {
     drag.current = null;
   }
 
-  function zoomBy(factor: number) {
-    const scale = clamp(view.scale * factor, 0.4, 4);
-    // zoom around the map center
-    const worldX = (W / 2 - view.tx) / view.scale;
-    const worldY = (H / 2 - view.ty) / view.scale;
-    setView({ scale, tx: W / 2 - worldX * scale, ty: H / 2 - worldY * scale });
-  }
-  const resetView = () => setView({ tx: 0, ty: 0, scale: 1 });
+  const zoomBy = (factor: number) =>
+    zoomAt(dims.current.W / 2, dims.current.H / 2, factor, true);
+
+  const resetView = () => {
+    view.current = { tx: 0, ty: 0, scale: 1 };
+    applyView(true);
+  };
 
   // Suppress the click that ends a pan drag so panning doesn't open the panel.
   const guardedInspect = (d: Device) => {
@@ -274,27 +348,26 @@ export function NetworkMap({
           <div className="relative">
             {/* zoom controls */}
             <div className="absolute right-3 top-3 z-10 flex flex-col gap-1">
-              <MapBtn label="+" title="Zoom in" onClick={() => zoomBy(1.2)} />
-              <MapBtn label="−" title="Zoom out" onClick={() => zoomBy(1 / 1.2)} />
+              <MapBtn label="+" title="Zoom in" onClick={() => zoomBy(1.3)} />
+              <MapBtn label="−" title="Zoom out" onClick={() => zoomBy(1 / 1.3)} />
               <MapBtn label="⤢" title="Reset view" onClick={resetView} />
             </div>
             <span className="pointer-events-none absolute bottom-2 left-4 z-10 text-[11px] text-zinc-500">
-              scroll to zoom · drag to pan · click a device to inspect &amp; scan ports
+              scroll or pinch to zoom · drag to pan · click a device to inspect &amp; scan ports
             </span>
 
             <svg
-              ref={svgRef}
+              ref={setSvgRef}
               viewBox={`0 0 ${W} ${H}`}
-              className="h-auto w-full cursor-grab touch-none select-none active:cursor-grabbing"
+              className="h-auto max-h-[70vh] w-full cursor-grab touch-none select-none active:cursor-grabbing"
               role="group"
               aria-label={`Network map with ${onlineCount} online devices`}
-              onWheel={onWheel}
               onPointerDown={onPointerDown}
               onPointerMove={onPointerMove}
               onPointerUp={onPointerUp}
               onPointerLeave={onPointerUp}
             >
-              <g transform={`translate(${view.tx} ${view.ty}) scale(${view.scale})`}>
+              <g ref={gRef} style={{ transformOrigin: "0 0" }}>
                 {/* The gateway is the firewall/NAT boundary - everything above
                     this line is outside your control, everything below trusts
                     everything else. Drawn from local facts only: naming a
@@ -334,15 +407,7 @@ export function NetworkMap({
 
                 {/* Gateway */}
                 {hub && (
-                  <DeviceNode
-                    d={hub}
-                    x={W / 2}
-                    y={GATEWAY_Y}
-                    r={30}
-                    hover={hover}
-                    setHover={setHover}
-                    onInspect={guardedInspect}
-                  />
+                  <DeviceNode d={hub} x={W / 2} y={GATEWAY_Y} r={30} onInspect={guardedInspect} />
                 )}
 
                 {/* Zones */}
@@ -392,16 +457,7 @@ export function NetworkMap({
                         const x = g.x + BOX_PAD + col * CELL_W + CELL_W / 2;
                         const y = g.y + HEADER_H + row * CELL_H + CELL_H / 2 - 6;
                         return (
-                          <DeviceNode
-                            key={d.id}
-                            d={d}
-                            x={x}
-                            y={y}
-                            r={22}
-                            hover={hover}
-                            setHover={setHover}
-                            onInspect={guardedInspect}
-                          />
+                          <DeviceNode key={d.id} d={d} x={x} y={y} r={22} onInspect={guardedInspect} />
                         );
                       })}
                   </g>
@@ -456,41 +512,37 @@ function TierNode({
   );
 }
 
+/**
+ * A device on the map. Hover/focus emphasis is pure CSS (.map-node in
+ * index.css) - routing it through React state re-rendered the entire map on
+ * every mouseover.
+ */
 function DeviceNode({
   d,
   x,
   y,
   r,
-  hover,
-  setHover,
   onInspect,
 }: {
   d: Device;
   x: number;
   y: number;
   r: number;
-  hover: string | null;
-  setHover: (id: string | null) => void;
   onInspect: (d: Device) => void;
 }) {
   const status = statusOf(d);
   const color = STATUS[status].ring;
-  const active = hover === d.id;
   const name = displayName(d);
   const scan = scanStatus(d);
   return (
     <g
       transform={`translate(${x} ${y})`}
-      className="cursor-pointer"
+      className="map-node"
       role="button"
       tabIndex={0}
       aria-label={`${name}${d.ip ? `, ${d.ip}` : ""}${d.online === 1 ? "" : ", offline"}${
         scan.status === "risky" ? `, ${scan.riskCount} risky ports` : ""
       } - open details`}
-      onMouseEnter={() => setHover(d.id)}
-      onMouseLeave={() => setHover(null)}
-      onFocus={() => setHover(d.id)}
-      onBlur={() => setHover(null)}
       onClick={() => onInspect(d)}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -508,12 +560,13 @@ function DeviceNode({
               : "")}
       </title>
       <circle
+        className="map-ring"
         r={r}
         fill="#0b0d12"
         stroke={color}
-        strokeWidth={active ? 3 : 2}
+        strokeWidth={2}
         strokeDasharray={d.online === 1 ? undefined : "3 3"}
-        opacity={d.online === 1 ? (active ? 1 : 0.9) : 0.4}
+        opacity={d.online === 1 ? 0.9 : 0.4}
       />
       <text
         textAnchor="middle"
@@ -533,10 +586,11 @@ function DeviceNode({
         </g>
       )}
       <text
+        className="map-label"
         textAnchor="middle"
         y={r + 14}
         fontSize={12}
-        fill={active ? "#fafafa" : "#a1a1aa"}
+        fill="#a1a1aa"
         fontWeight={d.is_gateway ? 600 : 400}
       >
         {truncate(name)}

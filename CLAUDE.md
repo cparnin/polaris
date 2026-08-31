@@ -86,6 +86,12 @@ No change is finished until all of these are true. Don't ask whether to do them
   192.168.x and 172.16.x) never matches. That silently hid every ARP-known host
   that doesn't answer ICMP. Correct versions: `discover.ts:inSubnet` and
   `portscan.ts:assertInSubnet`.
+- **React's synthetic `onWheel` is registered PASSIVE**, so `preventDefault()`
+  inside it is silently ignored: zooming the map also scrolled the page. The
+  map attaches its own non-passive wheel listener, and the pan/zoom camera
+  lives in a ref applied straight to the DOM (`NetworkMap.tsx`), because
+  routing it through `setState` re-rendered every node on every wheel tick.
+  Don't move the camera back into React state.
 - **Browser caches the content-hashed bundle.** After a rebuild, hard-reload or
   append `?v=N`, or you'll debug stale JS.
 - **Device identity:** `id` is the MAC, falling back to `ip:<addr>` when the MAC

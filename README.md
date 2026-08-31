@@ -59,7 +59,7 @@ That is the whole interface.
 - **Alerts you.** ntfy push when an unknown device joins, including what it has
   open. A heartbeat every 7 days, so silence means something is wrong.
 - **Maps it.** Live topology grouped by trust or device type, firewall boundary
-  drawn in, exposure badges on each node.
+  drawn in, exposure badges on each node. Scroll or pinch to zoom, drag to pan.
 - **Remembers.** SQLite history that survives restarts.
 
 ## Requirements
