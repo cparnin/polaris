@@ -10,7 +10,8 @@ import {
   type ScanDiff,
 } from "./db.js";
 import { portScan, type PortScanResult } from "./net/portscan.js";
-import { notifyNewDevice, isNtfyConfigured, sendNtfy, buildHeartbeatAlert } from "./notify.js";
+import { buildNewDeviceAlert, isNtfyConfigured, sendNtfy, buildHeartbeatAlert } from "./notify.js";
+import { queueAlert, drainOutbox } from "./outbox.js";
 import { getMeta, setMeta } from "./db.js";
 import { resolveCount, applyResolved } from "./config.js";
 import { updateHomeState } from "./home.js";
@@ -37,7 +38,11 @@ scanBus.setMaxListeners(0);
 // AUTOSCAN_NEW_DEVICES=0; capped so a burst of arrivals can't queue a long
 // train of nmap runs.
 const AUTOSCAN_NEW = process.env.AUTOSCAN_NEW_DEVICES !== "0";
-const AUTOSCAN_MAX = Math.max(0, Number(process.env.AUTOSCAN_MAX_PER_SCAN ?? 3) || 0);
+// Through config.ts like every other env number: the inline Number() version
+// turned AUTOSCAN_MAX_PER_SCAN=abc into 0, silently disabling autoscans.
+const AUTOSCAN_MAX = applyResolved(
+  resolveCount("AUTOSCAN_MAX_PER_SCAN", process.env.AUTOSCAN_MAX_PER_SCAN, 3, { min: 0, max: 50 })
+);
 
 /**
  * For each newly-seen device: port-scan it (up to AUTOSCAN_MAX per scan),
@@ -63,9 +68,11 @@ async function handleNewDevices(ids: string[]): Promise<void> {
     }
 
     if (isNtfyConfigured() && guestModeRemaining() === 0) {
-      await notifyNewDevice(dev, scan).catch((e: Error) =>
-        console.error("[notify] new-device push failed:", e.message)
-      );
+      // A failed push is queued and retried on later scans, not lost forever:
+      // the device is already recorded, so it will never be "new" again.
+      const msg = buildNewDeviceAlert(dev, scan);
+      const ok = await sendNtfy(msg).catch(() => false);
+      if (!ok) queueAlert(msg);
     }
   }
 }
@@ -83,7 +90,10 @@ const HEARTBEAT_DAYS = applyResolved(
 const HEARTBEAT_KEY = "lastHeartbeatAt";
 
 let scanning = false;
-let paused = false;
+// Persisted: the service runs under launchd with KeepAlive, so any crash or
+// `./polaris restart` respawns the process. Without this, a deliberate pause
+// silently resumed scanning and a guest-mode evening un-muted itself mid-party.
+let paused = getMeta("paused") === "1";
 /**
  * Guest mode: keep discovering and recording, just stop pushing new-device
  * alerts until this timestamp.
@@ -95,7 +105,7 @@ let paused = false;
  * suppressed permanently, nothing is silently trusted, and the devices still
  * appear on the dashboard and in history.
  */
-let guestUntil = 0;
+let guestUntil = Number(getMeta("guestUntil")) || 0;
 let lastSummary: ScanSummary | null = null;
 let scanCount = 0;
 
@@ -111,20 +121,26 @@ export function guestModeRemaining(): number {
 /** Mute new-device pushes for `hours` (0 turns it off). Returns the deadline. */
 export function setGuestMode(hours: number): number {
   guestUntil = hours > 0 ? Date.now() + hours * 3_600_000 : 0;
+  setMeta("guestUntil", String(guestUntil)); // deadline survives a respawn
   scanBus.emit("guest:changed", { until: guestUntil });
   return guestUntil;
 }
 
-/** Pause/resume the auto-scan loop. Pure: flips the flag and announces it. */
+/** Pause/resume the auto-scan loop. Persists so a respawn stays paused. */
 export function setPaused(value: boolean): void {
   paused = value;
+  setMeta("paused", value ? "1" : "0");
   scanBus.emit("scan:paused", { paused });
 }
 
 // Every Nth scan, re-resolve *every* device's name from the network instead of
 // trusting the cache - so renamed devices and names that were unresolvable the
 // first time get picked up. Unknown hosts are always re-resolved regardless.
-const NAME_REFRESH_EVERY = Math.max(1, Number(process.env.NAME_REFRESH_EVERY ?? 6));
+// Through config.ts: the inline version turned NAME_REFRESH_EVERY=abc into
+// NaN, and `scanCount % NaN` is never 0, so names were never refreshed at all.
+const NAME_REFRESH_EVERY = applyResolved(
+  resolveCount("NAME_REFRESH_EVERY", process.env.NAME_REFRESH_EVERY, 6, { min: 1, max: 1000 })
+);
 
 export function isScanning(): boolean {
   return scanning;
@@ -227,6 +243,11 @@ export async function runScan(): Promise<ScanSummary> {
     };
     lastSummary = summary;
     scanBus.emit("scan:done", summary);
+    // Retry alerts whose push failed on an earlier scan. Detached like the
+    // sends themselves: network I/O must not stall the scan loop.
+    if (isNtfyConfigured()) {
+      void drainOutbox().catch((e: Error) => console.error("[ntfy] outbox drain failed:", e.message));
+    }
     void maybeHeartbeat(now).catch((e: Error) =>
       console.error("[heartbeat] failed:", e.message)
     );

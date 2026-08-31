@@ -5,7 +5,7 @@ import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isLoopbackHost, isSameOriginRequest } from "./security.js";
-import { resolveInterval, applyResolved } from "./config.js";
+import { resolveInterval, resolveCount, applyResolved } from "./config.js";
 import {
   closeDb,
   listDevices,
@@ -33,7 +33,9 @@ import {
 import { ntfyStatus, isNtfyConfigured, sendNtfy } from "./notify.js";
 import { homeStatus, anchorCurrentGateway, removeHomeGateway } from "./home.js";
 
-const PORT = Number(process.env.PORT ?? 4000);
+// Through config.ts: PORT=abc as a bare Number() is NaN, and listen(NaN) binds
+// a random ephemeral port - `./polaris` then reports "not answering" forever.
+const PORT = applyResolved(resolveCount("PORT", process.env.PORT, 4000, { min: 1, max: 65535 }));
 // Bind to loopback by default: the API exposes your full device inventory, so
 // it must NOT be reachable from the LAN. Override HOST only if you know why.
 const HOST = process.env.HOST ?? "127.0.0.1";

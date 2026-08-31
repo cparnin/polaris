@@ -19,13 +19,36 @@ export function isNtfyConfigured(): boolean {
   return Boolean(NTFY_URL);
 }
 
+// Outcome of the most recent send attempt. "Configured" only means the URL
+// parses; without this, a topic that 404s every push still shows "alerts on"
+// in the dashboard, which is the tool asserting a fact it never checked.
+let lastSendOk: boolean | null = null;
+let lastSendError: string | null = null;
+let lastSendAt: number | null = null;
+
+function recordSend(ok: boolean, error: string | null): void {
+  lastSendOk = ok;
+  lastSendError = error;
+  lastSendAt = Date.now();
+}
+
+export interface NtfySendState {
+  configured: boolean;
+  host: string | null;
+  /** null until a send has been attempted this process lifetime. */
+  lastSendOk: boolean | null;
+  lastSendError: string | null;
+  lastSendAt: number | null;
+}
+
 /** Redacted config summary for the health endpoint (never leaks the topic). */
-export function ntfyStatus(): { configured: boolean; host: string | null } {
-  if (!NTFY_URL) return { configured: false, host: null };
+export function ntfyStatus(): NtfySendState {
+  const send = { lastSendOk, lastSendError, lastSendAt };
+  if (!NTFY_URL) return { configured: false, host: null, ...send };
   try {
-    return { configured: true, host: new URL(NTFY_URL).host };
+    return { configured: true, host: new URL(NTFY_URL).host, ...send };
   } catch {
-    return { configured: true, host: "invalid-url" };
+    return { configured: true, host: "invalid-url", ...send };
   }
 }
 
@@ -76,11 +99,14 @@ export async function sendNtfy(msg: NtfyMessage): Promise<boolean> {
     });
     if (!res.ok) {
       console.error(`[ntfy] send failed: ${res.status} ${res.statusText}`);
+      recordSend(false, `${res.status} ${res.statusText}`);
       return false;
     }
+    recordSend(true, null);
     return true;
   } catch (err) {
     console.error(`[ntfy] send error: ${(err as Error).message}`);
+    recordSend(false, (err as Error).message);
     return false;
   }
 }

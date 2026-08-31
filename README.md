@@ -57,7 +57,9 @@ That is the whole interface.
   UPnP and friends. Says "unconfirmed" when it is guessing instead of inventing a
   service name from a port number.
 - **Alerts you.** ntfy push when an unknown device joins, including what it has
-  open. A heartbeat every 7 days, so silence means something is wrong.
+  open. A failed push is queued and retried on later scans, not lost, and the
+  dashboard pill turns amber when pushes are bouncing. A heartbeat every 7
+  days, so silence means something is wrong.
 - **Maps it.** Live topology grouped by trust or device type, firewall boundary
   drawn in, exposure badges on each node. Scroll or pinch to zoom, drag to pan.
 - **Remembers.** SQLite history that survives restarts.
@@ -87,6 +89,9 @@ NTFY_URL=https://ntfy.sh/polaris-home-CHANGE-ME-8fk39dk2mx7
 
 Use a long, unguessable topic: anyone who knows a public ntfy topic can read it.
 Subscribe in the ntfy app, then click **alerts on** to send a test.
+
+Both **Pause** and **Guest mode** survive a restart: the daemon respawns on
+crashes and logins, and a deliberate mute should not silently undo itself.
 
 Having people over? **Guest mode** mutes new-device pushes for 4 hours. Visitors'
 phones use randomized MACs, so they look like a new device every visit.

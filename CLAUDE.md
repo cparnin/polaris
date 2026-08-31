@@ -40,7 +40,18 @@ production build: **a single ~80MB Node process on http://127.0.0.1:4000**.
   a dead Polaris and a quiet network look identical: both send nothing. The
   timestamp lives in the `meta` table so restarts neither re-send nor lose it.
 - New devices are auto port-scanned on arrival (`AUTOSCAN_NEW_DEVICES=0` to
-  disable), and the finding is folded into the ntfy alert.
+  disable), and the finding is folded into the ntfy alert. A failed push is
+  queued in `meta` (`outbox.ts`) and retried on later scans; `ntfyStatus()`
+  reports the last send outcome so the UI pill can say "alerts failing".
+- Pause and guest mode persist in `meta` (`paused`, `guestUntil`): launchd
+  respawns the process on crashes and logins, and a deliberate mute must not
+  silently undo itself.
+- The dashboard consumes the SSE `hello` event on every (re)connect and
+  re-reads the world; without that, a server restart left stale data on
+  screen posing as live.
+- Port-scan rows never expire in the DB, so the UI downgrades a clean scan
+  older than 30 days to "stale" (`deviceMeta.ts:scanStatus`). Risky stays
+  risky at any age.
 - **Home network anchor (`home.ts`):** the network is identified by its
   gateway's MAC (meta key `homeGateways`, a JSON array; adopted automatically
   when empty). Away from an anchored gateway, new-device pushes AND autoscans
