@@ -12,7 +12,9 @@ function Stat({ label, value, accent }: { label: string; value: string | number;
 export function StatBar({ devices, loading }: { devices: Device[]; loading?: boolean }) {
   const online = devices.filter((d) => d.online === 1).length;
   const untrusted = devices.filter((d) => d.trusted === 0 && d.online === 1).length;
-  const randomized = devices.filter((d) => d.randomized === 1).length;
+  // The headline security number: devices whose port scan found something
+  // risky. It was computed, persisted, and then shown only as a tiny map badge.
+  const exposed = devices.filter((d) => (d.risk_count ?? 0) > 0).length;
 
   // Before the first scan lands there is no "0 devices online" - there is no
   // answer yet. These are the largest numbers on the page; showing a confident
@@ -28,7 +30,11 @@ export function StatBar({ devices, loading }: { devices: Device[]; loading?: boo
         value={show(untrusted)}
         accent={!loading && untrusted > 0 ? "text-amber-400" : "text-white"}
       />
-      <Stat label="Privacy MACs" value={show(randomized)} accent="text-sky-400" />
+      <Stat
+        label="Exposures"
+        value={show(exposed)}
+        accent={!loading && exposed > 0 ? "text-red-400" : "text-white"}
+      />
     </div>
   );
 }

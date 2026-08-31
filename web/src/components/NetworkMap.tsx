@@ -1,7 +1,7 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { Device } from "../api.js";
 import { displayName } from "../api.js";
-import { deviceIcon, scanStatus } from "../deviceMeta.js";
+import { deviceIcon, relTime, scanStatus } from "../deviceMeta.js";
 
 /** Trust status → ring color + legend label. Also encoded by tier/group/icon,
  *  so the map never relies on color alone. */
@@ -557,7 +557,9 @@ function DeviceNode({
             ? ` · ${scan.riskCount} risky port${scan.riskCount > 1 ? "s" : ""}`
             : scan.status === "clean"
               ? " · no risky ports"
-              : "")}
+              : scan.status === "stale"
+                ? ` · clean when scanned ${relTime(d.last_portscan_at!)} - stale, rescan to confirm`
+                : "")}
       </title>
       <circle
         className="map-ring"
@@ -576,11 +578,23 @@ function DeviceNode({
       >
         {deviceIcon(d)}
       </text>
-      {/* exposure badge: red count = risky ports, green ✓ = scanned clean */}
+      {/* exposure badge: red count = risky ports, green ✓ = scanned clean,
+          grey ✓ = was clean but the scan is old enough to distrust */}
       {scan.status !== "unscanned" && (
         <g transform={`translate(${r * 0.72} ${-r * 0.72})`}>
-          <circle r={9} fill={scan.status === "risky" ? "#ef4444" : "#10b981"} stroke="#0b0d12" strokeWidth={1.5} />
-          <text textAnchor="middle" dominantBaseline="central" fontSize={scan.status === "risky" ? 11 : 12} fontWeight={700} fill="#0b0d12">
+          <circle
+            r={9}
+            fill={scan.status === "risky" ? "#ef4444" : scan.status === "stale" ? "#3f3f46" : "#10b981"}
+            stroke="#0b0d12"
+            strokeWidth={1.5}
+          />
+          <text
+            textAnchor="middle"
+            dominantBaseline="central"
+            fontSize={scan.status === "risky" ? 11 : 12}
+            fontWeight={700}
+            fill={scan.status === "stale" ? "#a1a1aa" : "#0b0d12"}
+          >
             {scan.status === "risky" ? scan.riskCount : "✓"}
           </text>
         </g>

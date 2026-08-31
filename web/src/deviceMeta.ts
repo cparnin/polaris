@@ -23,13 +23,24 @@ export function deviceIcon(d: Device): string {
   return "❔";
 }
 
-export type ScanStatus = "unscanned" | "clean" | "risky";
+export type ScanStatus = "unscanned" | "clean" | "stale" | "risky";
 
-/** Port-scan exposure status for a device, derived from its persisted scan. */
+/** A clean scan this old is no longer evidence of anything. */
+export const SCAN_STALE_MS = 30 * 24 * 60 * 60 * 1000;
+
+/**
+ * Port-scan exposure status for a device, derived from its persisted scan.
+ * Scan results never expire in the DB, so a device scanned clean months ago
+ * would wear a confident green check forever; past SCAN_STALE_MS a clean
+ * result downgrades to "stale". A risky result stays risky at any age: an old
+ * warning is still a warning, but an old all-clear is not an all-clear.
+ */
 export function scanStatus(d: Device): { status: ScanStatus; riskCount: number } {
   if (d.last_portscan_at == null) return { status: "unscanned", riskCount: 0 };
   const riskCount = d.risk_count ?? 0;
-  return { status: riskCount > 0 ? "risky" : "clean", riskCount };
+  if (riskCount > 0) return { status: "risky", riskCount };
+  const stale = Date.now() - d.last_portscan_at > SCAN_STALE_MS;
+  return { status: stale ? "stale" : "clean", riskCount };
 }
 
 export function relTime(ts: number): string {

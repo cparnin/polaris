@@ -7,7 +7,7 @@ import { DeviceCard } from "./components/DeviceCard.js";
 import { EventFeed } from "./components/EventFeed.js";
 import { NameDevices } from "./components/NameDevices.js";
 
-type Filter = "all" | "online" | "untrusted" | "new";
+type Filter = "all" | "online" | "untrusted" | "risky" | "new";
 
 /** How long a device stays flagged NEW before the badge expires on its own. */
 const NEW_BADGE_MS = 6 * 60 * 60 * 1000; // 6 hours
@@ -81,6 +81,21 @@ export default function App() {
   // Live updates via server-sent events.
   useEffect(() => {
     const es = new EventSource("/api/stream");
+    // Sent on every (re)connect. Without consuming it, a server restart left
+    // the dashboard showing pre-restart data as live for up to a whole scan
+    // interval: EventSource reconnects, the warning banner clears, and nothing
+    // re-reads the world.
+    es.addEventListener("hello", (ev) => {
+      const h = JSON.parse((ev as MessageEvent).data) as {
+        scanning: boolean;
+        paused: boolean;
+        lastScan: ScanSummary | null;
+      };
+      setScanning(h.scanning);
+      setPaused(h.paused);
+      if (h.lastScan) setLastScan(h.lastScan);
+      void refresh();
+    });
     es.addEventListener("scan:start", () => setScanning(true));
     es.addEventListener("scan:done", (ev) => {
       setScanning(false);
@@ -95,8 +110,16 @@ export default function App() {
         });
       }
       void refresh();
-      // Each scan re-evaluates which network we're on; keep the banner honest.
-      void api.home().then(setHome).catch(() => {});
+      // Each scan re-evaluates which network we're on and may have attempted
+      // pushes; re-read health so the away banner AND the alerts pill stay
+      // honest (a topic that rejects every send should not show "alerts on").
+      void api
+        .health()
+        .then((h) => {
+          setHome(h.home ?? null);
+          setNtfy(h.ntfy);
+        })
+        .catch(() => {});
     });
     es.addEventListener("scan:error", () => setScanning(false));
     es.addEventListener("scan:paused", (ev) => {
@@ -223,13 +246,17 @@ export default function App() {
       .filter((d) => {
         if (filter === "online" && d.online !== 1) return false;
         if (filter === "untrusted" && (d.trusted === 1 || d.online !== 1)) return false;
+        if (filter === "risky" && (d.risk_count ?? 0) === 0) return false;
         if (filter === "new" && !newIds.has(d.id)) return false;
         if (!q) return true;
         return `${displayName(d)} ${d.ip} ${d.mac} ${d.vendor}`.toLowerCase().includes(q);
       })
       .sort((a, b) => {
-        // online first, then new, then by IP
+        // online first, then risky exposure, then new, then by IP
         if (a.online !== b.online) return b.online - a.online;
+        const ar = (a.risk_count ?? 0) > 0 ? 1 : 0;
+        const br = (b.risk_count ?? 0) > 0 ? 1 : 0;
+        if (ar !== br) return br - ar;
         const an = newIds.has(a.id) ? 1 : 0;
         const bn = newIds.has(b.id) ? 1 : 0;
         if (an !== bn) return bn - an;
@@ -241,6 +268,7 @@ export default function App() {
     ["all", "All"],
     ["online", "Online"],
     ["untrusted", "Untrusted"],
+    ["risky", "Risky"],
     ["new", "New"],
   ];
 
@@ -334,15 +362,30 @@ export default function App() {
           {ntfy && (
             <button
               onClick={ntfy.configured ? testNotify : undefined}
-              title={ntfy.configured ? `ntfy → ${ntfy.host} (click to test)` : "ntfy not configured - set NTFY_URL"}
+              title={
+                !ntfy.configured
+                  ? "ntfy not configured - set NTFY_URL"
+                  : ntfy.lastSendOk === false
+                    ? `last push failed: ${ntfy.lastSendError ?? "unknown error"} (click to test)`
+                    : `ntfy → ${ntfy.host} (click to test)`
+              }
               className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs transition-colors ${
-                ntfy.configured
-                  ? "bg-sky-500/15 text-sky-300 hover:bg-sky-500/25"
-                  : "cursor-default bg-white/5 text-zinc-500"
+                !ntfy.configured
+                  ? "cursor-default bg-white/5 text-zinc-500"
+                  : ntfy.lastSendOk === false
+                    ? "bg-amber-500/15 text-amber-300 hover:bg-amber-500/25"
+                    : "bg-sky-500/15 text-sky-300 hover:bg-sky-500/25"
               }`}
             >
-              <span className={`h-2 w-2 rounded-full ${ntfy.configured ? "bg-sky-400" : "bg-zinc-600"}`} />
-              {testMsg || (ntfy.configured ? "alerts on" : "alerts off")}
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  !ntfy.configured ? "bg-zinc-600" : ntfy.lastSendOk === false ? "bg-amber-400" : "bg-sky-400"
+                }`}
+              />
+              {/* "on" means the URL parses; "failing" means the last real send
+                  bounced. Asserting "on" through a dead topic is a silent lie. */}
+              {testMsg ||
+                (!ntfy.configured ? "alerts off" : ntfy.lastSendOk === false ? "alerts failing" : "alerts on")}
             </button>
           )}
           <button

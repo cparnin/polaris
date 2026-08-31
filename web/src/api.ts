@@ -55,6 +55,10 @@ async function json<T>(res: Response): Promise<T> {
 export interface NtfyStatus {
   configured: boolean;
   host: string | null;
+  /** Outcome of the most recent real send; null until one has been attempted. */
+  lastSendOk: boolean | null;
+  lastSendError: string | null;
+  lastSendAt: number | null;
 }
 
 export interface OpenPort {

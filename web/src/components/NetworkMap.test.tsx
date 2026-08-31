@@ -61,7 +61,8 @@ test("shows a clean badge for a scanned device with no risky ports", () => {
           hostname: "Printer",
           online: 1,
           ip: "192.168.4.60",
-          last_portscan_at: 1000,
+          // recent: an old clean scan downgrades to "stale" instead
+          last_portscan_at: Date.now() - 1000,
           risk_count: 0,
         }),
       ]}
@@ -69,6 +70,24 @@ test("shows a clean badge for a scanned device with no risky ports", () => {
   );
   expect(screen.getByText(/Printer.*no risky ports/)).toBeInTheDocument();
   expect(screen.getByText("✓")).toBeInTheDocument();
+});
+
+test("an old clean scan shows a stale badge, not a confident green check", () => {
+  render(
+    <NetworkMap
+      devices={[
+        makeDevice({
+          id: "cam",
+          hostname: "Old-Cam",
+          online: 1,
+          ip: "192.168.4.70",
+          last_portscan_at: Date.now() - 90 * 24 * 60 * 60 * 1000,
+          risk_count: 0,
+        }),
+      ]}
+    />
+  );
+  expect(screen.getByText(/Old-Cam.*stale, rescan to confirm/)).toBeInTheDocument();
 });
 
 test("shows an empty state when nothing is online", () => {
